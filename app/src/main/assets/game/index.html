@@ -18,11 +18,16 @@
 </head>
 <body><div id="game"></div><div id="top">OPEN WORLD • ANDROID</div><div id="status">Carregando mundo 3D...</div><button id="live-update" onclick="location.reload()">ATUALIZAÇÃO DISPONÍVEL • TOQUE PARA APLICAR</button>
 <div id="controls"><div id="stick"><div id="nub"></div></div><div id="hint">TOQUE E ARRASTE PARA MOVER</div><button class="btn" id="jump">PULAR</button><button class="btn" id="vehicle">ENTRAR</button></div>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
+</script>
 <script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import * as THREE from 'three';
 import {FBXLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/FBXLoader.js';
 import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 const status=document.querySelector('#status'), root=document.querySelector('#game');
+window.addEventListener('error',e=>{status.textContent='Erro ao iniciar 3D: '+(e.message||'verifique a internet');});
+window.addEventListener('unhandledrejection',e=>{status.textContent='Falha ao carregar recurso 3D • confira a internet';console.error(e.reason);});
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x8fc3df);scene.fog=new THREE.Fog(0x8fc3df,65,180);
 const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,250);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
@@ -47,7 +52,7 @@ const neutralTexture='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQA
 const characterManager=new THREE.LoadingManager();
 characterManager.setURLModifier(url=>{
  const name=decodeURIComponent(url.split(/[\\/]/).pop());
- if(/\\.(png|jpe?g)$/i.test(name)) return /diffuse/i.test(name)?textureBase+name:neutralTexture;
+ if(/\.(png|jpe?g)$/i.test(name)) return /diffuse/i.test(name)?textureBase+name:neutralTexture;
  return url;
 });
 const characterLoader=new FBXLoader(characterManager);
