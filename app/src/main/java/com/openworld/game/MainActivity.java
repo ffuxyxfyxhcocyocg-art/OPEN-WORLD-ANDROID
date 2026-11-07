@@ -13,8 +13,10 @@ public class MainActivity extends Activity {
     private GLSurfaceView surface;
     private GameRenderer renderer;
     private TextView status;
-    private int activePointerId = -1;
-    private float lastTouchX, lastTouchY;
+    private int movePointerId = -1;
+    private int lookPointerId = -1;
+    private float moveStartX, moveStartY;
+    private float lastLookX, lastLookY;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -27,44 +29,61 @@ public class MainActivity extends Activity {
 
         surface.setOnTouchListener((v, e) -> {
             int action = e.getActionMasked();
+            int index = e.getActionIndex();
 
-            if (action == MotionEvent.ACTION_DOWN) {
-                activePointerId = e.getPointerId(0);
-                lastTouchX = e.getX(0);
-                lastTouchY = e.getY(0);
-                if (lastTouchX / Math.max(1f, v.getWidth()) < 0.48f) {
-                    updateTouchControl(v.getWidth(), v.getHeight(), lastTouchX, lastTouchY);
-                } else {
+            if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
+                int id = e.getPointerId(index);
+                float x = e.getX(index);
+                float y = e.getY(index);
+                boolean leftSide = x < v.getWidth() * 0.48f;
+
+                if (leftSide && movePointerId == -1) {
+                    movePointerId = id;
+                    moveStartX = x;
+                    moveStartY = y;
                     renderer.setMovement(0f, 0f);
+                } else if (!leftSide && lookPointerId == -1) {
+                    lookPointerId = id;
+                    lastLookX = x;
+                    lastLookY = y;
                 }
                 return true;
             }
 
-            if (action == MotionEvent.ACTION_MOVE && activePointerId != -1) {
-                int index = e.findPointerIndex(activePointerId);
-                if (index >= 0) {
-                    float x = e.getX(index);
-                    float y = e.getY(index);
-                    boolean onLeft = x / Math.max(1f, v.getWidth()) < 0.48f;
-                    if (onLeft) {
-                        updateTouchControl(v.getWidth(), v.getHeight(), x, y);
-                    } else {
-                        renderer.setMovement(0f, 0f);
-                        renderer.rotateCamera(lastTouchX - x, lastTouchY - y);
+            if (action == MotionEvent.ACTION_MOVE) {
+                for (int i = 0; i < e.getPointerCount(); i++) {
+                    int id = e.getPointerId(i);
+                    float x = e.getX(i);
+                    float y = e.getY(i);
+
+                    if (id == movePointerId) {
+                        float rangeX = Math.max(1f, v.getWidth() * 0.13f);
+                        float rangeY = Math.max(1f, v.getHeight() * 0.18f);
+                        float mx = (x - moveStartX) / rangeX;
+                        float my = (moveStartY - y) / rangeY;
+                        renderer.setMovement(clamp(mx), clamp(my));
+                    } else if (id == lookPointerId) {
+                        renderer.rotateCamera(lastLookX - x, lastLookY - y);
+                        lastLookX = x;
+                        lastLookY = y;
                     }
-                    lastTouchX = x;
-                    lastTouchY = y;
                 }
                 return true;
             }
 
-            if (action == MotionEvent.ACTION_UP ||
-                action == MotionEvent.ACTION_CANCEL ||
-                action == MotionEvent.ACTION_POINTER_UP) {
-                if (action != MotionEvent.ACTION_POINTER_UP ||
-                    e.getPointerId(e.getActionIndex()) == activePointerId) {
-                    activePointerId = -1;
+            if (action == MotionEvent.ACTION_POINTER_UP || action == MotionEvent.ACTION_UP ||
+                action == MotionEvent.ACTION_CANCEL) {
+                if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
+                    movePointerId = -1;
+                    lookPointerId = -1;
                     renderer.setMovement(0f, 0f);
+                } else {
+                    int liftedId = e.getPointerId(index);
+                    if (liftedId == movePointerId) {
+                        movePointerId = -1;
+                        renderer.setMovement(0f, 0f);
+                    }
+                    if (liftedId == lookPointerId) lookPointerId = -1;
                 }
                 return true;
             }
@@ -99,14 +118,14 @@ public class MainActivity extends Activity {
         }));
     }
 
-    private void updateTouchControl(int width, int height, float x, float y) {
-        float nx = x / Math.max(1f, width);
-        float ny = y / Math.max(1f, height);
-        renderer.setMovement((nx - 0.20f) * 5.0f, (0.78f - ny) * 5.0f);
+    private static float clamp(float value) {
+        return Math.max(-1f, Math.min(1f, value));
     }
 
     @Override protected void onPause() {
         super.onPause();
+        movePointerId = -1;
+        lookPointerId = -1;
         if (surface != null) surface.onPause();
         if (renderer != null) renderer.setMovement(0f, 0f);
     }
