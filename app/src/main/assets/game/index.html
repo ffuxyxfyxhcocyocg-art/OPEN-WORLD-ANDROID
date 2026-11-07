@@ -265,7 +265,8 @@ let characterMixer=null,idleAction=null,runAction=null,isMoving=false,characterR
 function updateCharacterAnimation(running){
  if(running===isMoving)return;
  isMoving=running;
- const next=running?runAction:idleAction,previous=running?idleAction:runAction;
+ const next=(running&&runAction)?runAction:idleAction;
+ const previous=(running&&runAction)?idleAction:runAction;
  if(next){next.reset().fadeIn(.18).play();if(previous)previous.fadeOut(.18);}
 }
 function attachCharacter(model,animations=[],label='Personagem GLB'){
@@ -292,12 +293,17 @@ function attachCharacter(model,animations=[],label='Personagem GLB'){
   if(o.isSkinnedMesh&&o.skeleton)o.skeleton.update();
  });
  visualRoot.add(model);
- // Mantém um corpo-reserva dourado visível até confirmar a renderização do GLB.
- body.material.color.setHex(0xb89a42);head.material.color.setHex(0xc99570);
- body.visible=true;head.visible=true;
- body.scale.set(1.25,1.25,1.25);body.material.color.setHex(0xffc400);
- player.visible=true;visualRoot.visible=true;
- player.rotation.set(0,0,0);characterAnchor.add(visualRoot);characterReady=true;
+ // O corpo geométrico é apenas um marcador de carregamento; nunca deve
+ // ficar por cima do personagem real depois que o GLB foi carregado.
+ body.visible=false;
+ head.visible=false;
+ player.visible=true;
+ visualRoot.visible=true;
+ visualRoot.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
+ player.rotation.set(0,0,0);
+ characterAnchor.visible=true;
+ characterAnchor.add(visualRoot);
+ characterReady=true;
  characterMixer=new THREE.AnimationMixer(model);
  const idleClip=animations.find(a=>/idle|breath|stand/i.test(a.name))||animations[0];
  const runClip=animations.find(a=>/run|walk|jog/i.test(a.name));
