@@ -29,16 +29,34 @@ import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js
 const status=document.querySelector('#status'), root=document.querySelector('#game');
 window.addEventListener('error',e=>{status.textContent='Erro ao iniciar 3D: '+(e.message||'verifique a internet');});
 window.addEventListener('unhandledrejection',e=>{status.textContent='Falha ao carregar recurso 3D • confira a internet';console.error(e.reason);});
-const scene=new THREE.Scene();scene.background=new THREE.Color(0x8fc3df);scene.fog=new THREE.Fog(0x8fc3df,65,180);
-const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,250);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x1687df);scene.fog=new THREE.Fog(0x8fc3df,155,330);
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,420);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;renderer.shadowMap.enabled=false;root.appendChild(renderer.domElement);
 scene.add(new THREE.HemisphereLight(0xffffff,0x64745c,2));
 const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(-25,45,20);scene.add(sun);
 const mat=(c)=>new THREE.MeshStandardMaterial({color:c,roughness:.82});
-const ground=new THREE.Mesh(new THREE.PlaneGeometry(220,220),mat(0x528b54));ground.rotation.x=-Math.PI/2;ground.position.y=-.08;scene.add(ground);
+// Ilha tropical: oceano, praia clara, terreno verde e falésias em anel.
+const ocean=new THREE.Mesh(new THREE.PlaneGeometry(700,700),new THREE.MeshStandardMaterial({color:0x0756a8,roughness:.32,metalness:.12}));ocean.rotation.x=-Math.PI/2;ocean.position.y=-2.25;scene.add(ocean);
+const sand=new THREE.Mesh(new THREE.RingGeometry(84,96,128),new THREE.MeshStandardMaterial({color:0xe6d19a,roughness:1,side:THREE.DoubleSide}));sand.rotation.x=-Math.PI/2;sand.position.y=-.13;scene.add(sand);
+const island=new THREE.Mesh(new THREE.CircleGeometry(87,128),new THREE.MeshStandardMaterial({color:0x579447,roughness:1}));island.rotation.x=-Math.PI/2;island.position.y=-.08;scene.add(island);
+const cliffMat=mat(0x77716a);
+for(let n=0;n<72;n++){const a=n/72*Math.PI*2,r=91+Math.sin(n*2.31)*2.1;const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(2.7+(n%4)*.45,0),cliffMat);rock.position.set(Math.cos(a)*r,-.7+(n%3)*.15,Math.sin(a)*r);rock.scale.set(1.35,.9,1.1);rock.rotation.y=a;scene.add(rock);}
 function block(x,z,w,d,h,color){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(color));m.position.set(x,h/2,z);scene.add(m);return m}
-block(0,.0,9,.0+180,.12,0x30343a);block(0,0,180,9,.12,0x30343a);
+// Malha de ruas em quadras com faixas e cruzamentos.
+const roadMat=mat(0x343b43),lineMat=new THREE.MeshStandardMaterial({color:0xf5e6a6,roughness:.8});
+for(let k=-3;k<=3;k++){
+ const p=k*26;
+ block(p,0,5.8,166,.13,0x343b43);block(0,p,166,5.8,.13,0x343b43);
+ for(let q=-3;q<=3;q++){
+  const t=q*26;
+  if(k!==3){const dash1=new THREE.Mesh(new THREE.BoxGeometry(.13,.025,3.2),lineMat);dash1.position.set(p,.09,t+9);scene.add(dash1);const dash2=dash1.clone();dash2.position.z=t-9;scene.add(dash2);}
+  const dash3=new THREE.Mesh(new THREE.BoxGeometry(3.2,.025,.13),lineMat);dash3.position.set(t,.09,p+9);scene.add(dash3);const dash4=dash3.clone();dash4.position.z=p-9;scene.add(dash4);
+ }
+}
+// Faixas de pedestres simples nos cruzamentos principais.
+for(const p of [-52,-26,0,26,52])for(let n=-3;n<=3;n++){for(const axis of [0,1]){const stripe=new THREE.Mesh(new THREE.BoxGeometry(axis?2.6:.45,.035,axis?.45:2.6),new THREE.MeshStandardMaterial({color:0xe7e8e4}));stripe.position.set(p+(axis?n*0.8:0),.11,p+(axis?0:n*.8));scene.add(stripe);}}
+
 
 // Cidade 3D com volumes arquitetônicos e janelas/balcões instanciados (leve para celular).
 const glassMat=new THREE.MeshStandardMaterial({color:0x3f7188,metalness:.22,roughness:.24});
@@ -101,12 +119,40 @@ function detailedBuilding(x,z,w,d,h,color,index){
  const vent=new THREE.Mesh(new THREE.CylinderGeometry(.18,.22,.8,8),mat(0x555d62));vent.position.set(x+w*.28,h+.62,z-d*.2);scene.add(vent);
 }
 let buildingIndex=0;
-for(let i=-4;i<=4;i++)for(let j=-4;j<=4;j++){
- if(i===0||j===0)continue;
- const x=i*17,z=j*17,h=9+((i*i+j*j)%5)*2.4;
- const colors=[0xd2c3a7,0xc7cbd0,0xd6bda0,0xaebfc0,0xc8a9a0,0xb9b1a0,0xe0d8c8,0x9eafb6,0xc9c2b4,0xb5a6a0];
- detailedBuilding(x,z,11,11,h,colors[(i-j+25)%colors.length],buildingIndex++);
+for(let i=-3;i<=2;i++)for(let j=-3;j<=2;j++){
+ const x=i*26+13,z=j*26+13;
+ if(Math.hypot(x,z)>76)continue;
+ const h=5.8+((i*i+j*j+Math.abs(i-j))%4)*1.25;
+ const colors=[0xd8c5a5,0xc8d0d0,0xd6b99a,0xb4c2bd,0xc9aaa0,0xbeb7a3,0xe2d9c8,0x9eafb6,0xc9c1b1,0xb9a9a0];
+ detailedBuilding(x,z,10.5+(i%2)*1.2,10.5+(j%2)*1.2,h,colors[(i-j+30)%colors.length],buildingIndex++);
 }
+// Casas térreas e sobrados coloridos para dar escala de bairro costeiro.
+for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++){
+ const x=i*25+1,z=j*25-12;if(Math.hypot(x,z)>70||Math.abs(x)<10||Math.abs(z)<10)continue;
+ const w=7+(Math.abs(i+j)%3),d=7+(Math.abs(i-j)%3),h=4.2+(Math.abs(i*j)%3)*.55;
+ const colors=[0xf0d7ad,0xe9e1d0,0xd9b59c,0xc6d7d2,0xe6c6a5];
+ const house=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(colors[(i-j+15)%colors.length]));house.position.set(x,h/2,z);scene.add(house);collisionRects.push({minX:x-w/2,maxX:x+w/2,minZ:z-d/2,maxZ:z+d/2});
+ const roof=new THREE.Mesh(new THREE.ConeGeometry(Math.max(w,d)*.72,2.4,4),mat([0x8c4938,0x586779,0x9b6046][Math.abs(i+j)%3]));roof.position.set(x,h+1,z);roof.rotation.y=Math.PI/4;scene.add(roof);
+ const door=new THREE.Mesh(new THREE.BoxGeometry(.9,2,.12),mat(0x604333));door.position.set(x,.95,z+d/2+.07);scene.add(door);
+}
+// Árvores low-poly espalhadas nas áreas verdes, longe das ruas principais.
+function makeTree(x,z,scale=1){const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.18,.28,1.7,6),mat(0x765037));trunk.position.set(x,.8*scale,z);trunk.scale.setScalar(scale);scene.add(trunk);for(let k=0;k<3;k++){const crown=new THREE.Mesh(new THREE.IcosahedronGeometry(1.25-k*.12,1),mat([0x28763b,0x398b42,0x4b9848][k]));crown.position.set(x+(k-1)*.16,1.85*scale+k*.55*scale,z);crown.scale.set(1.05*scale,1.1*scale,1.05*scale);scene.add(crown);}}
+for(let i=0;i<105;i++){const a=i*2.399,r=42+(i%9)*4.8,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.abs(x%26)<5||Math.abs(z%26)<5||Math.hypot(x,z)>82)continue;makeTree(x,z,.72+(i%4)*.12);}
+// Morro rochoso e farol listrado no extremo noroeste.
+const hill=new THREE.Mesh(new THREE.ConeGeometry(19,16,9),mat(0x657b55));hill.position.set(-62,7,-61);hill.scale.set(1.15,1,1);scene.add(hill);
+const lighthouse=new THREE.Group();lighthouse.position.set(-62,14,-61);scene.add(lighthouse);
+const tower=new THREE.Mesh(new THREE.CylinderGeometry(1.35,2.1,12,12),mat(0xe8e3d7));tower.position.y=6;lighthouse.add(tower);
+for(let y=2;y<11;y+=4){const stripe=new THREE.Mesh(new THREE.CylinderGeometry(1.65-y*.025,2.0-y*.025,1.15,12),mat(0xb63832));stripe.position.y=y;lighthouse.add(stripe);}
+const lantern=new THREE.Mesh(new THREE.CylinderGeometry(1.45,1.45,1.8,10),new THREE.MeshStandardMaterial({color:0x354c5a,metalness:.45,roughness:.25}));lantern.position.y=12.4;lighthouse.add(lantern);
+const beacon=new THREE.PointLight(0xffe8b0,18,42);beacon.position.set(0,13,0);lighthouse.add(beacon);
+// Lago interior com margem de areia e pequena plataforma de madeira.
+const lakeSand=new THREE.Mesh(new THREE.CircleGeometry(15,48),mat(0xd7c28d));lakeSand.rotation.x=-Math.PI/2;lakeSand.position.set(52,.01,-48);scene.add(lakeSand);
+const lake=new THREE.Mesh(new THREE.CircleGeometry(12.8,48),new THREE.MeshStandardMaterial({color:0x247fba,roughness:.18,metalness:.18}));lake.rotation.x=-Math.PI/2;lake.position.set(52,.06,-48);scene.add(lake);
+const dock=new THREE.Mesh(new THREE.BoxGeometry(3,.28,10),mat(0x9b6941));dock.position.set(65,.22,-45);scene.add(dock);
+// Caixa-d'água elevada na região leste.
+const legsMat=mat(0x626b70);for(const x of [-1.7,1.7])for(const z of [-1.7,1.7]){const leg=new THREE.Mesh(new THREE.CylinderGeometry(.16,.2,9,7),legsMat);leg.position.set(66+x,4.5,20+z);scene.add(leg);}
+const tank=new THREE.Mesh(new THREE.CylinderGeometry(2.6,2.6,3.1,12),mat(0xbfc8c9));tank.position.set(66,10.2,20);scene.add(tank);
+const tankRoof=new THREE.Mesh(new THREE.ConeGeometry(2.6,.9,12),mat(0x7e8b8d));tankRoof.position.set(66,12.2,20);scene.add(tankRoof);
 for(const mesh of [windowInstances,sideWindowInstances,sillInstances,sideSillInstances,balconyInstances,doorInstances]){
  mesh.count=mesh===windowInstances?wi:mesh===sideWindowInstances?swi:mesh===sillInstances?si:mesh===sideSillInstances?ssi:mesh===balconyInstances?bi:di;
  mesh.instanceMatrix.needsUpdate=true;scene.add(mesh);
