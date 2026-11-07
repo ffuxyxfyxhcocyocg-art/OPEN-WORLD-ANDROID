@@ -32,7 +32,7 @@ window.addEventListener('unhandledrejection',e=>{status.textContent='Falha ao ca
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x8fc3df);scene.fog=new THREE.Fog(0x8fc3df,65,180);
 const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,250);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;root.appendChild(renderer.domElement);
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;renderer.shadowMap.enabled=false;root.appendChild(renderer.domElement);
 scene.add(new THREE.HemisphereLight(0xffffff,0x64745c,2));
 const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(-25,45,20);scene.add(sun);
 const mat=(c)=>new THREE.MeshStandardMaterial({color:c,roughness:.82});
@@ -50,6 +50,7 @@ const sideSillGeo=new THREE.BoxGeometry(.34,.16,2.0);
 const balconyGeo=new THREE.BoxGeometry(2.25,.16,.9);
 const doorGeo=new THREE.BoxGeometry(1.35,2.2,.16);
 const windowInstances=new THREE.InstancedMesh(windowGeo,glassMat,5000);
+const collisionRects=[];
 const sideWindowInstances=new THREE.InstancedMesh(sideWindowGeo,glassMat,5000);
 const sillInstances=new THREE.InstancedMesh(sillGeo,frameMat,5000);
 const sideSillInstances=new THREE.InstancedMesh(sideSillGeo,frameMat,5000);
@@ -62,7 +63,9 @@ function put(mesh,index,x,y,z,ry=0,sx=1,sy=1,sz=1){
 }
 function detailedBuilding(x,z,w,d,h,color,index){
  const floors=Math.max(2,Math.floor(h/2.7));
- const shell=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(color));shell.position.set(x,h/2,z);scene.add(shell);
+ const facade=new THREE.MeshStandardMaterial({color,roughness:.94,metalness:.015});
+ const shell=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),facade);shell.position.set(x,h/2,z);scene.add(shell);
+ collisionRects.push({minX:x-w/2,maxX:x+w/2,minZ:z-d/2,maxZ:z+d/2});
  // Base, cobertura e platibanda com profundidade real
  const base=new THREE.Mesh(new THREE.BoxGeometry(w+.55,.38,d+.55),mat(0x777b7b));base.position.set(x,.19,z);scene.add(base);
  const roof=new THREE.Mesh(new THREE.BoxGeometry(w+.7,.34,d+.7),roofMat);roof.position.set(x,h+.17,z);scene.add(roof);
@@ -101,7 +104,7 @@ let buildingIndex=0;
 for(let i=-4;i<=4;i++)for(let j=-4;j<=4;j++){
  if(i===0||j===0)continue;
  const x=i*17,z=j*17,h=9+((i*i+j*j)%5)*2.4;
- const colors=[0xb9b4a8,0x9cabb4,0xc2b39d,0x8d9caa,0xb5a7a0];
+ const colors=[0xd2c3a7,0xc7cbd0,0xd6bda0,0xaebfc0,0xc8a9a0,0xb9b1a0,0xe0d8c8,0x9eafb6,0xc9c2b4,0xb5a6a0];
  detailedBuilding(x,z,11,11,h,colors[(i-j+25)%colors.length],buildingIndex++);
 }
 for(const mesh of [windowInstances,sideWindowInstances,sillInstances,sideSillInstances,balconyInstances,doorInstances]){
@@ -171,6 +174,9 @@ new GLTFLoader().load('https://raw.githubusercontent.com/shliamin/JS-3D-Car/main
  model.position.set(-center.x*scale,-b2.min.y*scale,-center.z*scale);
  car.clear();car.add(model);carLoaded=true;status.textContent='Ferrari 3D carregada • entre no veículo';
 },undefined,e=>{status.textContent='Carro provisório ativo • falha ao carregar modelo remoto';});
+// Colisão circular contra os limites dos edifícios; movimento por eixo evita prender nas quinas.
+function blockedAt(x,z,r){return collisionRects.some(b=>x+r>b.minX&&x-r<b.maxX&&z+r>b.minZ&&z-r<b.maxZ)}
+function moveWithCollision(obj,dx,dz,r){const nx=obj.position.x+dx;if(!blockedAt(nx,obj.position.z,r))obj.position.x=nx;const nz=obj.position.z+dz;if(!blockedAt(obj.position.x,nz,r))obj.position.z=nz;}
 let driving=false,speed=0,yaw=0,jump=0,move={x:0,y:0},last=performance.now();
 const stick=document.querySelector('#stick'),nub=document.querySelector('#nub');let pointer=null;
 function setStick(e){const r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,len=Math.hypot(dx,dy),max=43,k=Math.min(1,max/(len||1));move.x=dx*k/max;move.y=-dy*k/max;nub.style.transform='translate('+dx*k+'px,'+dy*k+'px)'}
@@ -181,8 +187,8 @@ stick.addEventListener('pointerup',release);stick.addEventListener('pointercance
 document.querySelector('#vehicle').onclick=()=>{if(driving){driving=false;player.position.copy(car.position);player.position.x+=Math.cos(yaw)*2;player.position.z+=Math.sin(yaw)*2;document.querySelector('#vehicle').textContent='ENTRAR'}else if(player.position.distanceTo(car.position)<5){driving=true;player.position.copy(car.position);document.querySelector('#vehicle').textContent='SAIR'}};
 document.querySelector('#jump').onclick=()=>{if(!driving)jump=1};
 function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,(now-last)/1000);last=now;
- if(driving){if(Math.abs(move.y)>.03){yaw+=move.x*dt*1.7*Math.sign(move.y);speed=THREE.MathUtils.damp(speed,move.y*13,2.5,dt)}else speed=THREE.MathUtils.damp(speed,0,2,dt);car.rotation.y=yaw;car.position.x-=Math.sin(yaw)*speed*dt;car.position.z-=Math.cos(yaw)*speed*dt}
- else{const forward=camera.getWorldDirection(new THREE.Vector3());forward.y=0;forward.normalize();const right=new THREE.Vector3(-forward.z,0,forward.x);const direction=right.multiplyScalar(move.x).add(forward.multiplyScalar(move.y));if(direction.lengthSq()>.0001){direction.normalize();player.position.addScaledVector(direction,5*dt);player.rotation.y=Math.atan2(direction.x,direction.z)}}
+ if(driving){if(Math.abs(move.y)>.03){yaw+=move.x*dt*1.7*Math.sign(move.y);speed=THREE.MathUtils.damp(speed,move.y*13,2.5,dt)}else speed=THREE.MathUtils.damp(speed,0,2,dt);car.rotation.y=yaw;moveWithCollision(car,-Math.sin(yaw)*speed*dt,-Math.cos(yaw)*speed*dt,1.45)}
+ else{const forward=camera.getWorldDirection(new THREE.Vector3());forward.y=0;forward.normalize();const right=new THREE.Vector3(-forward.z,0,forward.x);const direction=right.multiplyScalar(move.x).add(forward.multiplyScalar(move.y));if(direction.lengthSq()>.0001){direction.normalize();moveWithCollision(player,direction.x*5*dt,direction.z*5*dt,.48);player.rotation.y=Math.atan2(direction.x,direction.z)}}
  updateCharacterAnimation(!driving&&Math.hypot(move.x,move.y)>.1);
  if(characterMixer)characterMixer.update(dt);
  if(jump>0){player.position.y=Math.sin((1-jump)*Math.PI)*1.1;jump-=dt*1.7;if(jump<=0){jump=0;player.position.y=0}}
