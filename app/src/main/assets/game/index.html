@@ -38,7 +38,52 @@ const mat=(c)=>new THREE.MeshStandardMaterial({color:c,roughness:.82});
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(220,220),mat(0x528b54));ground.rotation.x=-Math.PI/2;ground.position.y=-.08;scene.add(ground);
 function block(x,z,w,d,h,color){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(color));m.position.set(x,h/2,z);scene.add(m);return m}
 block(0,.0,9,.0+180,.12,0x30343a);block(0,0,180,9,.12,0x30343a);
-for(let i=-4;i<=4;i++){for(let j=-4;j<=4;j++){if(i===0||j===0)continue;const x=i*17,z=j*17,h=7+((i*i+j*j)%5)*2;block(x,z,11,11,h,[0xb9b4a8,0x9cabb4,0xc2b39d,0x8d9caa][(i-j+20)%4]);}}
+
+// Prédios 3D detalhados: fachadas, andares, janelas, molduras, vitrines e telhados.
+const glassMat=new THREE.MeshStandardMaterial({color:0x6ca6bd,metalness:.28,roughness:.22});
+const frameMat=mat(0xe1d7c5),darkGlass=new THREE.MeshStandardMaterial({color:0x243b4a,roughness:.3,metalness:.15});
+function detailedBuilding(x,z,w,d,h,color,seed){
+ const wallMat=mat(color),floorH=2.65,floors=Math.max(2,Math.floor(h/floorH));
+ const shell=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),wallMat);shell.position.set(x,h/2,z);scene.add(shell);
+ const base=new THREE.Mesh(new THREE.BoxGeometry(w+.22,.32,d+.22),mat(0x777b7b));base.position.set(x,.16,z);scene.add(base);
+ const roof=new THREE.Mesh(new THREE.BoxGeometry(w+.32,.28,d+.32),frameMat);roof.position.set(x,h+.14,z);scene.add(roof);
+ // Fachadas norte/sul
+ for(let side of [-1,1]){
+  for(let floor=0;floor<floors;floor++){
+   const y=1.05+floor*floorH;
+   for(let col=0;col<3;col++){
+    const wx=x+(col-1)*(w/3);
+    const win=new THREE.Mesh(new THREE.BoxGeometry(1.65,1.45,.09),glassMat);
+    win.position.set(wx,y,z+side*(d/2+.055));scene.add(win);
+    const sill=new THREE.Mesh(new THREE.BoxGeometry(1.82,.12,.18),frameMat);
+    sill.position.set(wx,y-.78,z+side*(d/2+.08));scene.add(sill);
+    const mullion=new THREE.Mesh(new THREE.BoxGeometry(.07,1.48,.12),frameMat);
+    mullion.position.set(wx,y,z+side*(d/2+.12));scene.add(mullion);
+   }
+  }
+ }
+ // Fachadas laterais com janelas menores
+ for(let side of [-1,1]){
+  for(let floor=0;floor<floors;floor++)for(let col=0;col<2;col++){
+   const win=new THREE.Mesh(new THREE.BoxGeometry(.09,1.35,2.05),glassMat);
+   win.position.set(x+side*(w/2+.055),1.05+floor*floorH,z+(col-.5)*(d/2));scene.add(win);
+   const sill=new THREE.Mesh(new THREE.BoxGeometry(.18,.12,2.2),frameMat);
+   sill.position.set(x+side*(w/2+.08),.35+floor*floorH,z+(col-.5)*(d/2));scene.add(sill);
+  }
+ }
+ // Entrada comercial e marquise
+ const door=new THREE.Mesh(new THREE.BoxGeometry(1.25,2.15,.12),darkGlass);door.position.set(x,.98,z+d/2+.09);scene.add(door);
+ const canopy=new THREE.Mesh(new THREE.BoxGeometry(w*.72,.18,1.05),mat(0x343e48));canopy.position.set(x,2.35,z+d/2+.52);scene.add(canopy);
+ // Volume técnico no telhado e pequenos dutos
+ const rooftop=new THREE.Mesh(new THREE.BoxGeometry(w*.38,.85,d*.42),mat(0x9b9b94));rooftop.position.set(x,h+.68,z);scene.add(rooftop);
+ const vent=new THREE.Mesh(new THREE.BoxGeometry(.55,.5,.55),mat(0x626b70));vent.position.set(x+w*.28,h+.55,z-d*.22);scene.add(vent);
+}
+for(let i=-4;i<=4;i++){for(let j=-4;j<=4;j++){
+ if(i===0||j===0)continue;
+ const x=i*17,z=j*17,h=8+((i*i+j*j)%5)*2.3;
+ const colors=[0xb9b4a8,0x9cabb4,0xc2b39d,0x8d9caa,0xb5a7a0];
+ detailedBuilding(x,z,11,11,h,colors[(i-j+25)%colors.length],i*9+j);
+}}
 const player=new THREE.Group();scene.add(player);
 const body=new THREE.Mesh(new THREE.BoxGeometry(.65,1,.38),mat(0x174eaa));body.position.y=1;player.add(body);
 const head=new THREE.Mesh(new THREE.SphereGeometry(.23,12,10),mat(0xc99570));head.position.y=1.68;player.add(head);
