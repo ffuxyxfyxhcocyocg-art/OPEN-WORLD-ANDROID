@@ -267,17 +267,28 @@ function updateCharacterAnimation(running){
  if(next){next.reset().fadeIn(.18).play();if(previous)previous.fadeOut(.18);}
 }
 function attachCharacter(model,animations=[],label='Personagem GLB'){
- const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3());
- const scale=1.8/Math.max(size.y,.001);
- model.scale.setScalar(scale);
- model.position.set(-((bounds.min.x+bounds.max.x)/2)*scale,-bounds.min.y*scale,-((bounds.min.z+bounds.max.z)/2)*scale);
+ // Normaliza o GLB dentro de um grupo externo: preserva a hierarquia do esqueleto
+ // e evita deslocar/encolher os ossos do personagem durante o carregamento.
+ model.updateMatrixWorld(true);
+ const bounds=new THREE.Box3().setFromObject(model);
+ const size=bounds.getSize(new THREE.Vector3());
+ if(!Number.isFinite(size.y)||size.y<0.01)throw new Error('Modelo GLB sem altura válida');
+ const center=bounds.getCenter(new THREE.Vector3());
+ const scale=1.8/size.y;
+ const visualRoot=new THREE.Group();
+ visualRoot.name='MidasVisualRoot';
+ visualRoot.scale.setScalar(scale);
+ visualRoot.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
  model.traverse(o=>{
   if(!o.isMesh)return;
-  o.castShadow=true;o.receiveShadow=true;
+  o.visible=true;o.castShadow=true;o.receiveShadow=true;
+  if(o.geometry){o.geometry.computeBoundingSphere();}
   const materials=Array.isArray(o.material)?o.material:[o.material];
-  materials.forEach(m=>{if(!m)return;m.roughness=.82;m.metalness=0;if(m.map)m.map.colorSpace=THREE.SRGBColorSpace;m.needsUpdate=true;});
+  materials.forEach(m=>{if(!m)return;m.visible=true;m.transparent=false;m.opacity=1;m.depthWrite=true;m.side=THREE.DoubleSide;m.roughness=.82;m.metalness=0;if(m.map)m.map.colorSpace=THREE.SRGBColorSpace;m.needsUpdate=true;});
  });
- player.clear();player.rotation.set(0,0,0);model.rotation.set(0,0,0);player.add(model);characterReady=true;
+ visualRoot.add(model);
+ body.visible=false;head.visible=false;
+ player.rotation.set(0,0,0);player.add(visualRoot);characterReady=true;
  characterMixer=new THREE.AnimationMixer(model);
  const idleClip=animations.find(a=>/idle|breath|stand/i.test(a.name))||animations[0];
  const runClip=animations.find(a=>/run|walk|jog/i.test(a.name));
