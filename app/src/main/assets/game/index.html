@@ -311,7 +311,7 @@ function loadFallbackFBX(){
   status.textContent='Midas GLB não encontrado • usando personagem reserva FBX';
  },undefined,error=>{console.error('Falha no FBX reserva:',error);status.textContent='Falha ao carregar personagem 3D';});
 }
-glbCharacterLoader.load(midasUrl+'?v=19',gltf=>{
+glbCharacterLoader.load(midasUrl+'?v=20',gltf=>{
  attachCharacter(gltf.scene,gltf.animations,'Midas GLB carregado');
 },undefined,error=>{
  console.warn('Midas GLB ainda não está no repositório; ativando reserva FBX.',error);
