@@ -32,7 +32,7 @@ window.addEventListener('unhandledrejection',e=>{status.textContent='Falha ao ca
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x1687df);scene.fog=new THREE.Fog(0x8fc3df,155,330);
 const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,420);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;root.appendChild(renderer.domElement);
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;root.appendChild(renderer.domElement);
 scene.add(new THREE.HemisphereLight(0xffffff,0x64745c,2));
 const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(-45,75,35);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-145;sun.shadow.camera.right=145;sun.shadow.camera.top=145;sun.shadow.camera.bottom=-145;scene.add(sun);
 const mat=(c)=>new THREE.MeshStandardMaterial({color:c,roughness:.82});
@@ -127,18 +127,31 @@ for(let i=-3;i<=2;i++)for(let j=-3;j<=2;j++){
  detailedBuilding(x,z,9.5+(i%2)*1.4,9.5+(j%2)*1.4,h,colors[(i-j+30)%colors.length],buildingIndex++);
 }
 // Casas térreas e sobrados coloridos para dar escala de bairro costeiro.
-for(let i=-3;i<=3;i++)for(let j=-3;j<=3;j++){
- const x=i*34+10,z=j*34-10;if(Math.hypot(x,z)>108||Math.abs(x)<9||Math.abs(z)<9)continue;
- const w=7.5+(Math.abs(i+j)%3)*.8,d=7.5+(Math.abs(i-j)%3)*.8,h=4.4+(Math.abs(i*j)%4)*.65;
- const colors=[0xf0d7ad,0xe9e1d0,0xd9b59c,0xc6d7d2,0xe6c6a5];
- const house=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(colors[(i-j+15)%colors.length]));house.position.set(x,h/2,z);scene.add(house);collisionRects.push({minX:x-w/2,maxX:x+w/2,minZ:z-d/2,maxZ:z+d/2});
- const roofMat=mat([0x8c4938,0x586779,0x9b6046,0x70463d][Math.abs(i+j)%4]);
- const roofGeo=new THREE.BufferGeometry();const rw=w*.62,rd=d*.62,peak=h+2.35,eave=h+.08;
- const verts=[-rw,eave,-rd,rw,eave,-rd,0,peak,-rd,-rw,eave,rd,rw,eave,rd,0,peak,rd,-rw,eave,-rd,-rw,eave,rd,0,peak,0,rw,eave,-rd,rw,eave,rd,0,peak,0];
- roofGeo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));roofGeo.setIndex([0,2,1,3,4,5,6,7,8,9,11,10]);roofGeo.computeVertexNormals();const roof=new THREE.Mesh(roofGeo,roofMat);roof.position.set(x,0,z);roof.castShadow=true;scene.add(roof);
- const trim=new THREE.Mesh(new THREE.BoxGeometry(w+.35,.18,d+.35),mat(0xf0e7d5));trim.position.set(x,h+.03,z);scene.add(trim);
- const window=new THREE.Mesh(new THREE.BoxGeometry(1.15,1.15,.12),glassMat);window.position.set(x-w*.22,2.3,z+d/2+.08);scene.add(window);
- const door=new THREE.Mesh(new THREE.BoxGeometry(.9,2,.12),mat(0x604333));door.position.set(x,.95,z+d/2+.07);scene.add(door);
+// Bairro residencial: casas menores em lotes separados, com quintal e calçada.
+for(let i=-3;i<=2;i++)for(let j=-3;j<=2;j++){
+ const cellX=i*34,cellZ=j*34;
+ if(Math.hypot(cellX+17,cellZ+17)>108)continue;
+ // Mantém o centro das quadras livres para ruas internas e evita sobreposição com os prédios.
+ const spots=[[-9,-9],[9,-9],[-9,9],[9,9]];
+ for(let n=0;n<spots.length;n++){
+  const [ox,oz]=spots[n],x=cellX+17+ox,z=cellZ+17+oz;
+  if(Math.hypot(x,z)>111)continue;
+  const w=5.6+(n%2)*.65,d=5.8+((i+j+n+12)%2)*.55,h=3.8+((i*3+j+n+30)%3)*.45;
+  const colors=[0xf0d7ad,0xe9e1d0,0xd9b59c,0xc6d7d2,0xe6c6a5,0xd5c8a8,0xb8c8cb];
+  const house=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(colors[(i-j+n+30)%colors.length]));house.position.set(x,h/2,z);house.castShadow=true;house.receiveShadow=true;scene.add(house);
+  collisionRects.push({minX:x-w/2-.2,maxX:x+w/2+.2,minZ:z-d/2-.2,maxZ:z+d/2+.2});
+  const roofMat=mat([0x8c4938,0x586779,0x9b6046,0x70463d][(i+j+n+40)%4]);
+  const roofGeo=new THREE.BufferGeometry(),rw=w*.66,rd=d*.66,peak=h+1.75,eave=h+.04;
+  const verts=[-rw,eave,-rd,rw,eave,-rd,0,peak,-rd,-rw,eave,rd,rw,eave,rd,0,peak,rd,-rw,eave,-rd,-rw,eave,rd,0,peak,0,rw,eave,-rd,rw,eave,rd,0,peak,0];
+  roofGeo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));roofGeo.setIndex([0,2,1,3,4,5,6,7,8,9,11,10]);roofGeo.computeVertexNormals();
+  const roof=new THREE.Mesh(roofGeo,roofMat);roof.position.set(x,0,z);roof.castShadow=true;scene.add(roof);
+  const trim=new THREE.Mesh(new THREE.BoxGeometry(w+.22,.13,d+.22),mat(0xf0e7d5));trim.position.set(x,h+.02,z);scene.add(trim);
+  const frontZ=z+d/2+.07;
+  const door=new THREE.Mesh(new THREE.BoxGeometry(.78,1.75,.12),mat(0x604333));door.position.set(x,.88,frontZ);scene.add(door);
+  for(const side of [-1,1]){const win=new THREE.Mesh(new THREE.BoxGeometry(.92,1.05,.1),glassMat);win.position.set(x+side*1.45,2.1,frontZ);scene.add(win);}
+  // Pequeno jardim frontal individual.
+  const yard=new THREE.Mesh(new THREE.BoxGeometry(w+1.5,.08,1.8),mat(0x579447));yard.position.set(x,.02,z+d/2+1.1);scene.add(yard);
+ }
 }
 // Árvores low-poly espalhadas nas áreas verdes, longe das ruas principais.
 function makeTree(x,z,scale=1){const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.18,.28,1.7,6),mat(0x765037));trunk.position.set(x,.8*scale,z);trunk.scale.setScalar(scale);scene.add(trunk);for(let k=0;k<3;k++){const crown=new THREE.Mesh(new THREE.IcosahedronGeometry(1.25-k*.12,1),mat([0x28763b,0x398b42,0x4b9848][k]));crown.position.set(x+(k-1)*.16,1.85*scale+k*.55*scale,z);crown.scale.set(1.05*scale,1.1*scale,1.05*scale);scene.add(crown);}}
