@@ -1,0 +1,11 @@
+{
+  "world_name": "OPEN WORLD",
+  "content_version": 1,
+  "description": "Pacote inicial de configuração do mundo.",
+  "regions": [
+    {"id":"downtown","name":"Centro","type":"urban"},
+    {"id":"coast","name":"Orla","type":"coastal"},
+    {"id":"residential","name":"Bairro residencial","type":"residential"}
+  ],
+  "features": ["third_person_camera", "touch_movement", "procedural_city"]
+}
