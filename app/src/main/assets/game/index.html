@@ -261,7 +261,7 @@ characterManager.setURLModifier(url=>{
 });
 const characterLoader=new FBXLoader(characterManager);
 const glbCharacterLoader=new GLTFLoader();
-let characterMixer=null,idleAction=null,runAction=null,isMoving=false,characterReady=false;
+let characterMixer=null,idleAction=null,runAction=null,isMoving=false,characterReady=false,midasFailureReason='';
 function updateCharacterAnimation(running){
  if(running===isMoving)return;
  isMoving=running;
@@ -316,7 +316,7 @@ function attachCharacter(model,animations=[],label='Personagem GLB'){
   characterMixer=new THREE.AnimationMixer(model);
   characterLoader.load(animationBase+'Ch46_nonPBR@Breathing%20Idle.fbx',idle=>{if(idle.animations.length){idleAction=characterMixer.clipAction(idle.animations[0]);if(!isMoving)idleAction.play();}});
   characterLoader.load(animationBase+'Ch46_nonPBR@Running.fbx',running=>{if(running.animations.length){runAction=characterMixer.clipAction(running.animations[0]);if(isMoving)runAction.play();}});
-  status.textContent='Midas GLB não encontrado • usando personagem reserva FBX';
+  status.textContent='Personagem reserva FBX carregado • motivo do Midas: '+(midasFailureReason||'falha não identificada');
  },undefined,error=>{console.error('Falha no FBX reserva:',error);status.textContent='Falha ao carregar personagem 3D';});
 }
 async function loadMidasGLB(){
@@ -331,15 +331,17 @@ async function loadMidasGLB(){
   status.textContent='Midas recebido • interpretando modelo...';
   glbCharacterLoader.parse(data,'',gltf=>{
    try{attachCharacter(gltf.scene,gltf.animations,'Midas GLB carregado');}
-   catch(error){console.error('Erro ao montar Midas:',error);status.textContent='Erro ao montar Midas: '+(error.message||'modelo inválido')+' • reserva FBX';loadFallbackFBX();}
+   catch(error){console.error('Erro ao montar Midas:',error);midasFailureReason='montagem: '+(error.message||'modelo inválido');status.textContent='Erro ao montar Midas: '+midasFailureReason+' • reserva FBX';loadFallbackFBX();}
   },error=>{
    console.error('Erro ao interpretar Midas GLB:',error);
-   status.textContent='GLB inválido: '+(error.message||'falha de leitura')+' • reserva FBX';
+   midasFailureReason='leitura GLB: '+(error.message||'falha de leitura');
+   status.textContent='GLB inválido: '+midasFailureReason+' • reserva FBX';
    loadFallbackFBX();
   });
  }catch(error){
   console.error('Falha no download do Midas GLB:',error);
-  status.textContent='Falha Midas: '+(error.message||'erro de rede')+' • reserva FBX';
+  midasFailureReason='download: '+(error.message||'erro de rede');
+  status.textContent='Falha Midas: '+midasFailureReason+' • reserva FBX';
   loadFallbackFBX();
  }
 }
