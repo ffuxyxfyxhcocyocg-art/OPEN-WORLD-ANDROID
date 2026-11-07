@@ -1,11 +1,16 @@
 {
   "world_name": "OPEN WORLD",
-  "content_version": 1,
-  "description": "Pacote inicial de configuração do mundo.",
+  "content_version": 2,
+  "description": "Configuração remota do mapa inicial.",
+  "grid_radius": 5,
+  "block_spacing": 8.0,
+  "road_width": 9.0,
+  "building_base_height": 3.5,
+  "building_height_step": 1.2,
   "regions": [
     {"id":"downtown","name":"Centro","type":"urban"},
     {"id":"coast","name":"Orla","type":"coastal"},
     {"id":"residential","name":"Bairro residencial","type":"residential"}
   ],
-  "features": ["third_person_camera", "touch_movement", "procedural_city"]
+  "features": ["third_person_camera", "touch_movement", "procedural_city", "remote_world_config"]
 }
