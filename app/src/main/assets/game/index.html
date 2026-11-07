@@ -37,7 +37,7 @@ const camera=new THREE.PerspectiveCamera(72,innerWidth/innerHeight,.1,520);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;root.appendChild(renderer.domElement);
 scene.add(new THREE.HemisphereLight(0xffffff,0x64745c,2));
-const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(-45,75,35);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-145;sun.shadow.camera.right=145;sun.shadow.camera.top=145;sun.shadow.camera.bottom=-145;scene.add(sun);
+const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(-65,95,45);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-205;sun.shadow.camera.right=205;sun.shadow.camera.top=205;sun.shadow.camera.bottom=-205;sun.shadow.camera.near=1;sun.shadow.camera.far=320;sun.shadow.bias=-0.00012;sun.shadow.normalBias=.035;scene.add(sun);
 const mat=(c)=>new THREE.MeshStandardMaterial({color:c,roughness:.82});
 
 function surfaceTexture(base,detail,kind){
@@ -61,7 +61,7 @@ const sky=new THREE.Mesh(new THREE.SphereGeometry(490,32,20),new THREE.MeshBasic
 // Ilha tropical: oceano, praia clara, terreno verde e falésias em anel.
 const ocean=new THREE.Mesh(new THREE.PlaneGeometry(1200,1200),new THREE.MeshStandardMaterial({color:0x0756a8,roughness:.32,metalness:.12}));ocean.rotation.x=-Math.PI/2;ocean.position.y=-2.25;scene.add(ocean);
 const sand=new THREE.Mesh(new THREE.RingGeometry(176,194,192),new THREE.MeshStandardMaterial({color:0xe6d19a,roughness:1,side:THREE.DoubleSide}));sand.rotation.x=-Math.PI/2;sand.position.y=-.13;scene.add(sand);
-const island=new THREE.Mesh(new THREE.CircleGeometry(180,192),new THREE.MeshStandardMaterial({color:0xffffff,map:grassTexture,roughness:1}));island.rotation.x=-Math.PI/2;island.position.y=-.08;scene.add(island);
+const island=new THREE.Mesh(new THREE.CircleGeometry(180,192),new THREE.MeshStandardMaterial({color:0xffffff,map:grassTexture,roughness:1}));island.rotation.set(-Math.PI/2,0,0);island.position.y=-.08;island.receiveShadow=true;scene.add(island);
 const cliffMat=mat(0x77716a);
 for(let n=0;n<128;n++){const a=n/128*Math.PI*2,r=184+Math.sin(n*2.31)*3.4;const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(2.7+(n%4)*.45,0),cliffMat);rock.position.set(Math.cos(a)*r,-.7+(n%3)*.15,Math.sin(a)*r);rock.scale.set(1.35,.9,1.1);rock.rotation.y=a;scene.add(rock);}
 function block(x,z,w,d,h,color){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(color));m.position.set(x,h/2,z);m.castShadow=true;m.receiveShadow=true;scene.add(m);return m}
@@ -102,14 +102,16 @@ function put(mesh,index,x,y,z,ry=0,sx=1,sy=1,sz=1){
  dummy.position.set(x,y,z);dummy.rotation.set(0,ry,0);dummy.scale.set(sx,sy,sz);dummy.updateMatrix();mesh.setMatrixAt(index,dummy.matrix);
 }
 function detailedBuilding(x,z,w,d,h,color,index){
+ // A malha principal usa geometria centrada na origem e fica sempre vertical.
  const floors=Math.max(2,Math.floor(h/2.7));
  const facade=new THREE.MeshStandardMaterial({color,map:concreteTexture,roughness:.94,metalness:.015});
- const shell=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),facade);shell.position.set(x,h/2,z);shell.castShadow=true;shell.receiveShadow=true;scene.add(shell);
+ const shellGeometry=new THREE.BoxGeometry(w,h,d);shellGeometry.computeBoundingBox();shellGeometry.computeVertexNormals();
+ const shell=new THREE.Mesh(shellGeometry,facade);shell.position.set(x,h/2,z);shell.rotation.set(0,0,0);shell.castShadow=true;shell.receiveShadow=true;scene.add(shell);
  collisionRects.push({minX:x-w/2,maxX:x+w/2,minZ:z-d/2,maxZ:z+d/2});
  // Base, cobertura e platibanda com profundidade real
- const base=new THREE.Mesh(new THREE.BoxGeometry(w+.55,.38,d+.55),mat(0x777b7b));base.position.set(x,.19,z);scene.add(base);
- const roof=new THREE.Mesh(new THREE.BoxGeometry(w+.7,.34,d+.7),roofMat);roof.position.set(x,h+.17,z);scene.add(roof);
- const parapet=new THREE.Mesh(new THREE.BoxGeometry(w+.35,.72,.28),frameMat);parapet.position.set(x,h+.65,z-d/2);scene.add(parapet);
+ const base=new THREE.Mesh(new THREE.BoxGeometry(w+.55,.38,d+.55),mat(0x777b7b));base.position.set(x,.19,z);base.rotation.set(0,0,0);base.castShadow=true;base.receiveShadow=true;scene.add(base);
+ const roof=new THREE.Mesh(new THREE.BoxGeometry(w+.7,.34,d+.7),roofMat);roof.position.set(x,h+.17,z);roof.rotation.set(0,0,0);roof.castShadow=true;roof.receiveShadow=true;scene.add(roof);
+ const parapet=new THREE.Mesh(new THREE.BoxGeometry(w+.35,.72,.28),frameMat);parapet.position.set(x,h+.65,z-d/2);parapet.rotation.set(0,0,0);parapet.castShadow=true;parapet.receiveShadow=true;scene.add(parapet);
  // Volume lateral deslocado para quebrar o formato de caixa simples
  if(index%3===0){const wing=new THREE.Mesh(new THREE.BoxGeometry(w*.32,h*.72,d*.7),mat(color-0x080808));wing.position.set(x+w*.34,h*.36,z-d*.12);scene.add(wing);}
  // Colunas e faixas verticais na fachada
@@ -238,7 +240,7 @@ for(const mesh of [windowInstances,sideWindowInstances,sillInstances,sideSillIns
  mesh.count=mesh===windowInstances?wi:mesh===sideWindowInstances?swi:mesh===sillInstances?si:mesh===sideSillInstances?ssi:mesh===balconyInstances?bi:di;
  mesh.instanceMatrix.needsUpdate=true;scene.add(mesh);
 }
-const player=new THREE.Group();scene.add(player);
+const player=new THREE.Group();player.rotation.set(0,0,0);player.castShadow=true;player.receiveShadow=true;scene.add(player);
 const body=new THREE.Mesh(new THREE.BoxGeometry(.65,1,.38),mat(0x174eaa));body.position.y=1;player.add(body);
 const head=new THREE.Mesh(new THREE.SphereGeometry(.23,12,10),mat(0xc99570));head.position.y=1.68;player.add(head);
 player.position.set(0,0,3);
@@ -269,11 +271,11 @@ characterLoader.load(characterBase+'Ch46_nonPBR.fbx',model=>{
  model.position.set(-((bounds.min.x+bounds.max.x)/2)*scale,-bounds.min.y*scale,-((bounds.min.z+bounds.max.z)/2)*scale);
  model.traverse(o=>{
   if(!o.isMesh)return;
-  o.castShadow=false;o.receiveShadow=false;
+  o.castShadow=true;o.receiveShadow=true;
   const materials=Array.isArray(o.material)?o.material:[o.material];
   materials.forEach(m=>{if(!m)return;m.normalMap=null;m.bumpMap=null;m.roughnessMap=null;m.metalnessMap=null;m.aoMap=null;m.roughness=.88;m.metalness=0;if(m.map)m.map.colorSpace=THREE.SRGBColorSpace;m.needsUpdate=true;});
  });
- player.clear();player.add(model);characterReady=true;
+ player.clear();player.rotation.set(0,0,0);model.rotation.set(0,0,0);model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});player.add(model);characterReady=true;
  characterMixer=new THREE.AnimationMixer(model);
  status.textContent='Personagem 3D carregado • preparando animações';
  characterLoader.load(animationBase+'Ch46_nonPBR@Breathing%20Idle.fbx',idle=>{
