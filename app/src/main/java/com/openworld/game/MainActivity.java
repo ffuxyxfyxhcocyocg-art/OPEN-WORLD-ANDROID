@@ -93,7 +93,7 @@ public class MainActivity extends Activity {
         root.addView(status, bottom);
         setContentView(root);
 
-        ContentUpdater.check(this, message -> runOnUiThread(() -> status.setText(message)));
+        ContentUpdater.check(this, (message, world) -> runOnUiThread(() -> {\n            status.setText(message);\n            surface.queueEvent(() -> renderer.setWorldConfig(world));\n        }));
     }
 
     private void updateTouchControl(int width, int height, float x, float y) {
