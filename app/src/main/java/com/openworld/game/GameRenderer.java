@@ -13,6 +13,7 @@ import javax.microedition.khronos.opengles.GL10;
 public class GameRenderer implements GLSurfaceView.Renderer {
     private static final String VERT = "attribute vec3 aPos; uniform mat4 uMvp; void main(){ gl_Position=uMvp*vec4(aPos,1.0); }";
     private static final String FRAG = "precision mediump float; uniform vec4 uColor; void main(){ gl_FragColor=uColor; }";
+    private static final float MOVE_SPEED = 4.5f;
     private int program, posLoc, mvpLoc, colorLoc;
     private FloatBuffer cube;
     private final float[] projection=new float[16], view=new float[16], model=new float[16], vp=new float[16], mvp=new float[16];
@@ -21,6 +22,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     private volatile float blockSpacing = 8f, roadWidth = 9f, buildingMinHeight = 3.5f, buildingHeightStep = 1.2f;
     private volatile float cameraDistance = 10f, cameraHeight = 7.2f;
     private float playerX, playerZ;
+    private long lastFrameNanos;
 
     public void setMovement(float x,float y){ moveX=Math.max(-1,Math.min(1,x)); moveY=Math.max(-1,Math.min(1,y)); }
     public void rotateCamera(float dx,float dy){ yaw += dx*0.004f; }
@@ -57,6 +59,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         };
         cube=ByteBuffer.allocateDirect(v.length*4).order(ByteOrder.nativeOrder()).asFloatBuffer();
         cube.put(v).position(0);
+        lastFrameNanos = System.nanoTime();
     }
 
     @Override public void onSurfaceChanged(GL10 gl,int width,int height){
@@ -65,10 +68,19 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     }
 
     @Override public void onDrawFrame(GL10 gl){
-        playerX += moveX*0.075f;
-        playerZ -= moveY*0.075f;
-        float cx=playerX+(float)Math.sin(yaw)*cameraDistance;
-        float cz=playerZ+(float)Math.cos(yaw)*cameraDistance;
+        long now = System.nanoTime();
+        float delta = Math.min(0.05f, Math.max(0f, (now - lastFrameNanos) / 1_000_000_000f));
+        lastFrameNanos = now;
+
+        float forward = moveY * MOVE_SPEED * delta;
+        float strafe = moveX * MOVE_SPEED * delta;
+        float sin = (float)Math.sin(yaw);
+        float cos = (float)Math.cos(yaw);
+        playerX += strafe * cos - forward * sin;
+        playerZ -= strafe * sin + forward * cos;
+
+        float cx=playerX+sin*cameraDistance;
+        float cz=playerZ+cos*cameraDistance;
         Matrix.setLookAtM(view,0,cx,cameraHeight,cz,playerX,0.8f,playerZ,0,1,0);
         Matrix.multiplyMM(vp,0,projection,0,view,0);
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT|GLES20.GL_DEPTH_BUFFER_BIT);
