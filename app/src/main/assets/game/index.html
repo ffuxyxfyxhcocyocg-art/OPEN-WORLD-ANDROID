@@ -245,18 +245,20 @@ const body=new THREE.Mesh(new THREE.BoxGeometry(.65,1,.38),mat(0x174eaa));body.p
 const head=new THREE.Mesh(new THREE.SphereGeometry(.23,12,10),mat(0xc99570));head.position.y=1.68;player.add(head);
 player.position.set(0,0,3);
 
-// Personagem Ch46 (FBX) + animações Idle/Running do repositório original.
+// Midas GLB (principal). Se o arquivo ainda não estiver hospedado, usa o Ch46 FBX como fallback.
+const midasUrl='https://raw.githubusercontent.com/ffuxyxfyxhcocyocg-art/OPEN-WORLD-ANDROID/main/app/src/main/assets/game/models/midas.glb';
 const characterBase='https://raw.githubusercontent.com/dasprino007/Personagem-3D/main/Assets/Personagens/';
 const animationBase='https://raw.githubusercontent.com/dasprino007/Personagem-3D/main/Assets/Animations/';
 const textureBase=characterBase+'Textures/';
 const neutralTexture='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jYV8AAAAASUVORK5CYII=';
 const characterManager=new THREE.LoadingManager();
 characterManager.setURLModifier(url=>{
- const name=decodeURIComponent(url.split(/[\\/]/).pop());
- if(/\.(png|jpe?g)$/i.test(name)) return /diffuse/i.test(name)?textureBase+name:neutralTexture;
+ const name=decodeURIComponent(url.split(/[\\\\/]/).pop());
+ if(/\\.(png|jpe?g)$/i.test(name)) return /diffuse/i.test(name)?textureBase+name:neutralTexture;
  return url;
 });
 const characterLoader=new FBXLoader(characterManager);
+const glbCharacterLoader=new GLTFLoader();
 let characterMixer=null,idleAction=null,runAction=null,isMoving=false,characterReady=false;
 function updateCharacterAnimation(running){
  if(running===isMoving)return;
@@ -264,7 +266,7 @@ function updateCharacterAnimation(running){
  const next=running?runAction:idleAction,previous=running?idleAction:runAction;
  if(next){next.reset().fadeIn(.18).play();if(previous)previous.fadeOut(.18);}
 }
-characterLoader.load(characterBase+'Ch46_nonPBR.fbx',model=>{
+function attachCharacter(model,animations=[],label='Personagem GLB'){
  const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3());
  const scale=1.8/Math.max(size.y,.001);
  model.scale.setScalar(scale);
@@ -273,25 +275,38 @@ characterLoader.load(characterBase+'Ch46_nonPBR.fbx',model=>{
   if(!o.isMesh)return;
   o.castShadow=true;o.receiveShadow=true;
   const materials=Array.isArray(o.material)?o.material:[o.material];
-  materials.forEach(m=>{if(!m)return;m.normalMap=null;m.bumpMap=null;m.roughnessMap=null;m.metalnessMap=null;m.aoMap=null;m.roughness=.88;m.metalness=0;if(m.map)m.map.colorSpace=THREE.SRGBColorSpace;m.needsUpdate=true;});
+  materials.forEach(m=>{if(!m)return;m.roughness=.82;m.metalness=0;if(m.map)m.map.colorSpace=THREE.SRGBColorSpace;m.needsUpdate=true;});
  });
- player.clear();player.rotation.set(0,0,0);model.rotation.set(0,0,0);model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});player.add(model);characterReady=true;
+ player.clear();player.rotation.set(0,0,0);model.rotation.set(0,0,0);player.add(model);characterReady=true;
  characterMixer=new THREE.AnimationMixer(model);
- status.textContent='Personagem 3D carregado • preparando animações';
- characterLoader.load(animationBase+'Ch46_nonPBR@Breathing%20Idle.fbx',idle=>{
-  if(!idle.animations.length)return;
-  idleAction=characterMixer.clipAction(idle.animations[0]);
-  if(!isMoving)idleAction.play();
- });
- characterLoader.load(animationBase+'Ch46_nonPBR@Running.fbx',running=>{
-  if(!running.animations.length)return;
-  runAction=characterMixer.clipAction(running.animations[0]);
-  if(isMoving)runAction.play();
- });
+ const idleClip=animations.find(a=>/idle|breath|stand/i.test(a.name))||animations[0];
+ const runClip=animations.find(a=>/run|walk|jog/i.test(a.name));
+ idleAction=idleClip?characterMixer.clipAction(idleClip):null;
+ runAction=runClip?characterMixer.clipAction(runClip):null;
+ if(idleAction)idleAction.play();
+ status.textContent=label+(runAction?' • idle/corrida prontos':' • modelo carregado');
+}
+function loadFallbackFBX(){
+ characterLoader.load(characterBase+'Ch46_nonPBR.fbx',model=>{
+  const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3());
+  const scale=1.8/Math.max(size.y,.001);
+  model.scale.setScalar(scale);
+  model.position.set(-((bounds.min.x+bounds.max.x)/2)*scale,-bounds.min.y*scale,-((bounds.min.z+bounds.max.z)/2)*scale);
+  model.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;o.receiveShadow=true;const materials=Array.isArray(o.material)?o.material:[o.material];materials.forEach(m=>{if(!m)return;m.normalMap=null;m.bumpMap=null;m.roughnessMap=null;m.metalnessMap=null;m.aoMap=null;m.roughness=.88;m.metalness=0;if(m.map)m.map.colorSpace=THREE.SRGBColorSpace;m.needsUpdate=true;});});
+  player.clear();player.rotation.set(0,0,0);model.rotation.set(0,0,0);player.add(model);characterReady=true;
+  characterMixer=new THREE.AnimationMixer(model);
+  characterLoader.load(animationBase+'Ch46_nonPBR@Breathing%20Idle.fbx',idle=>{if(idle.animations.length){idleAction=characterMixer.clipAction(idle.animations[0]);if(!isMoving)idleAction.play();}});
+  characterLoader.load(animationBase+'Ch46_nonPBR@Running.fbx',running=>{if(running.animations.length){runAction=characterMixer.clipAction(running.animations[0]);if(isMoving)runAction.play();}});
+  status.textContent='Midas GLB não encontrado • usando personagem reserva FBX';
+ },undefined,error=>{console.error('Falha no FBX reserva:',error);status.textContent='Falha ao carregar personagem 3D';});
+}
+glbCharacterLoader.load(midasUrl+'?v=19',gltf=>{
+ attachCharacter(gltf.scene,gltf.animations,'Midas GLB carregado');
 },undefined,error=>{
- console.error('Falha ao carregar personagem FBX:',error);
- status.textContent='Personagem provisório • falha ao carregar FBX remoto';
+ console.warn('Midas GLB ainda não está no repositório; ativando reserva FBX.',error);
+ loadFallbackFBX();
 });
+
 let car=new THREE.Group();scene.add(car);car.position.set(0,0,-5.5);
 const carBody=new THREE.Mesh(new THREE.BoxGeometry(2,0.62,4),new THREE.MeshStandardMaterial({color:0xb91e22,metalness:.55,roughness:.3}));carBody.position.y=.68;car.add(carBody);
 const cab=new THREE.Mesh(new THREE.BoxGeometry(1.48,.72,1.9),new THREE.MeshStandardMaterial({color:0x1b303e,metalness:.2,roughness:.25}));cab.position.set(0,1.28,-.12);car.add(cab);
