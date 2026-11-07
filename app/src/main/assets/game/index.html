@@ -270,49 +270,42 @@ function updateCharacterAnimation(running){
  if(next){next.reset().fadeIn(.18).play();if(previous)previous.fadeOut(.18);}
 }
 function attachCharacter(model,animations=[],label='Personagem GLB'){
- // Normaliza o GLB dentro de um grupo externo: preserva a hierarquia do esqueleto
- // e evita deslocar/encolher os ossos do personagem durante o carregamento.
- model.updateMatrixWorld(true);
- const bounds=new THREE.Box3().setFromObject(model);
- const size=bounds.getSize(new THREE.Vector3());
- if(!Number.isFinite(size.y)||size.y<0.01)throw new Error('Modelo GLB sem altura válida');
- const center=bounds.getCenter(new THREE.Vector3());
- const scale=1.8/size.y;
- const visualRoot=new THREE.Group();
- visualRoot.name='MidasVisualRoot';
- visualRoot.scale.setScalar(scale);
- visualRoot.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
- model.traverse(o=>{
-  o.visible=true;
-  if(o.isMesh){
-   o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;
-   if(o.geometry){o.geometry.computeBoundingSphere();}
-   const materials=Array.isArray(o.material)?o.material:[o.material];
-   materials.forEach(m=>{if(!m)return;m.visible=true;m.transparent=false;m.opacity=1;m.alphaTest=0;m.depthWrite=true;m.side=THREE.DoubleSide;m.roughness=.82;m.metalness=0;if(m.map)m.map.colorSpace=THREE.SRGBColorSpace;m.needsUpdate=true;});
-  }
-  if(o.isSkinnedMesh&&o.skeleton)o.skeleton.update();
- });
- visualRoot.add(model);
- // O corpo geométrico é apenas um marcador de carregamento; nunca deve
- // ficar por cima do personagem real depois que o GLB foi carregado.
- body.visible=false;
- head.visible=false;
- player.visible=true;
- visualRoot.visible=true;
- visualRoot.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
- player.rotation.set(0,0,0);
- // Anexado diretamente ao jogador: posição, rotação e câmera usam o mesmo nó.
- player.add(visualRoot);
- characterReady=true;
- characterMixer=new THREE.AnimationMixer(model);
- const idleClip=animations.find(a=>/idle|breath|stand/i.test(a.name))||animations[0];
- const runClip=animations.find(a=>/run|walk|jog/i.test(a.name));
- idleAction=idleClip?characterMixer.clipAction(idleClip):null;
- runAction=runClip?characterMixer.clipAction(runClip):null;
- if(idleAction)idleAction.play();
- status.textContent=label+(runAction?' • idle/corrida prontos':' • modelo carregado');
-}
-function loadFallbackFBX(){
+  // Mantém a hierarquia, os materiais e o esqueleto originais do arquivo GLB.
+  const visualRoot=new THREE.Group();
+  visualRoot.name='MidasVisualRoot';
+  visualRoot.add(model);
+  model.updateMatrixWorld(true);
+  const bounds=new THREE.Box3().setFromObject(model);
+  const size=bounds.getSize(new THREE.Vector3());
+  if(!Number.isFinite(size.y)||size.y<0.05||size.y>10000)throw new Error('Altura inválida no modelo GLB');
+  const center=bounds.getCenter(new THREE.Vector3());
+  const scale=1.8/size.y;
+  visualRoot.scale.setScalar(scale);
+  visualRoot.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
+  model.traverse(o=>{
+   o.visible=true;
+   if(o.isMesh){
+    o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;
+    if(o.geometry&&!o.geometry.boundingSphere)o.geometry.computeBoundingSphere();
+    if(o.isSkinnedMesh&&o.skeleton)o.skeleton.update();
+    const materials=Array.isArray(o.material)?o.material:[o.material];
+    materials.forEach(m=>{if(!m)return;m.visible=true;if(m.map)m.map.colorSpace=THREE.SRGBColorSpace;m.needsUpdate=true;});
+   }
+  });
+  body.visible=false;head.visible=false;
+  player.clear();player.rotation.set(0,0,0);player.visible=true;
+  player.add(visualRoot);
+  visualRoot.visible=true;
+  visualRoot.updateMatrixWorld(true);
+  characterReady=true;
+  characterMixer=new THREE.AnimationMixer(model);
+  const idleClip=animations.find(a=>/idle|breath|stand/i.test(a.name))||animations[0];
+  const runClip=animations.find(a=>/run|walk|jog/i.test(a.name));
+  idleAction=idleClip?characterMixer.clipAction(idleClip):null;
+  runAction=runClip?characterMixer.clipAction(runClip):null;
+  if(idleAction)idleAction.play();
+  status.textContent=label+(runAction?' • idle/corrida prontos':' • modelo carregado');
+ }function loadFallbackFBX(){
  characterLoader.load(characterBase+'Ch46_nonPBR.fbx',model=>{
   const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3());
   const scale=1.8/Math.max(size.y,.001);
@@ -326,7 +319,7 @@ function loadFallbackFBX(){
   status.textContent='Midas GLB não encontrado • usando personagem reserva FBX';
  },undefined,error=>{console.error('Falha no FBX reserva:',error);status.textContent='Falha ao carregar personagem 3D';});
 }
-glbCharacterLoader.load(midasUrl+'?v=24',gltf=>{
+glbCharacterLoader.load(midasUrl+'?v=25',gltf=>{
  attachCharacter(gltf.scene,gltf.animations,'Midas GLB carregado');
 },undefined,error=>{
  console.warn('Midas GLB ainda não está no repositório; ativando reserva FBX.',error);
@@ -373,7 +366,7 @@ function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,(now-
  renderer.render(scene,camera);
 }requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
-status.textContent='Mundo pronto • aproxime-se do carro para entrar';
+if(!characterReady)status.textContent='Carregando personagem 3D...';
 </script><script>
 (async function liveUpdateCheck(){
  const versionUrl='https://raw.githubusercontent.com/ffuxyxfyxhcocyocg-art/OPEN-WORLD-ANDROID/main/version.txt';
