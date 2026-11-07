@@ -20,7 +20,7 @@
 <div id="controls"><div id="stick"><div id="nub"></div></div><div id="hint">TOQUE E ARRASTE PARA MOVER</div><button class="btn" id="jump">PULAR</button><button class="btn" id="vehicle">ENTRAR</button></div>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+import {FBXLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/FBXLoader.js';
 const status=document.querySelector('#status'), root=document.querySelector('#game');
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x8fc3df);scene.fog=new THREE.Fog(0x8fc3df,65,180);
 const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,250);
@@ -37,6 +37,54 @@ const player=new THREE.Group();scene.add(player);
 const body=new THREE.Mesh(new THREE.BoxGeometry(.65,1,.38),mat(0x174eaa));body.position.y=1;player.add(body);
 const head=new THREE.Mesh(new THREE.SphereGeometry(.23,12,10),mat(0xc99570));head.position.y=1.68;player.add(head);
 player.position.set(0,0,3);
+
+// Personagem Ch46 (FBX) + animações Idle/Running do repositório original.
+const characterBase='https://raw.githubusercontent.com/dasprino007/Personagem-3D/main/Assets/Personagens/';
+const animationBase='https://raw.githubusercontent.com/dasprino007/Personagem-3D/main/Assets/Animations/';
+const textureBase=characterBase+'Textures/';
+const neutralTexture='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jYV8AAAAASUVORK5CYII=';
+const characterManager=new THREE.LoadingManager();
+characterManager.setURLModifier(url=>{
+ const name=decodeURIComponent(url.split(/[\\/]/).pop());
+ if(/\\.(png|jpe?g)$/i.test(name)) return /diffuse/i.test(name)?textureBase+name:neutralTexture;
+ return url;
+});
+const characterLoader=new FBXLoader(characterManager);
+let characterMixer=null,idleAction=null,runAction=null,isMoving=false,characterReady=false;
+function updateCharacterAnimation(running){
+ if(running===isMoving)return;
+ isMoving=running;
+ const next=running?runAction:idleAction,previous=running?idleAction:runAction;
+ if(next){next.reset().fadeIn(.18).play();if(previous)previous.fadeOut(.18);}
+}
+characterLoader.load(characterBase+'Ch46_nonPBR.fbx',model=>{
+ const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3());
+ const scale=1.8/Math.max(size.y,.001);
+ model.scale.setScalar(scale);
+ model.position.set(-((bounds.min.x+bounds.max.x)/2)*scale,-bounds.min.y*scale,-((bounds.min.z+bounds.max.z)/2)*scale);
+ model.traverse(o=>{
+  if(!o.isMesh)return;
+  o.castShadow=false;o.receiveShadow=false;
+  const materials=Array.isArray(o.material)?o.material:[o.material];
+  materials.forEach(m=>{if(!m)return;m.normalMap=null;m.bumpMap=null;m.roughnessMap=null;m.metalnessMap=null;m.aoMap=null;m.roughness=.88;m.metalness=0;if(m.map)m.map.colorSpace=THREE.SRGBColorSpace;m.needsUpdate=true;});
+ });
+ player.clear();player.add(model);characterReady=true;
+ characterMixer=new THREE.AnimationMixer(model);
+ status.textContent='Personagem 3D carregado • preparando animações';
+ characterLoader.load(animationBase+'Ch46_nonPBR@Breathing%20Idle.fbx',idle=>{
+  if(!idle.animations.length)return;
+  idleAction=characterMixer.clipAction(idle.animations[0]);
+  if(!isMoving)idleAction.play();
+ });
+ characterLoader.load(animationBase+'Ch46_nonPBR@Running.fbx',running=>{
+  if(!running.animations.length)return;
+  runAction=characterMixer.clipAction(running.animations[0]);
+  if(isMoving)runAction.play();
+ });
+},undefined,error=>{
+ console.error('Falha ao carregar personagem FBX:',error);
+ status.textContent='Personagem provisório • falha ao carregar FBX remoto';
+});
 let car=new THREE.Group();scene.add(car);car.position.set(0,0,-5.5);
 const carBody=new THREE.Mesh(new THREE.BoxGeometry(2,0.62,4),new THREE.MeshStandardMaterial({color:0xb91e22,metalness:.55,roughness:.3}));carBody.position.y=.68;car.add(carBody);
 const cab=new THREE.Mesh(new THREE.BoxGeometry(1.48,.72,1.9),new THREE.MeshStandardMaterial({color:0x1b303e,metalness:.2,roughness:.25}));cab.position.set(0,1.28,-.12);car.add(cab);
@@ -60,6 +108,8 @@ document.querySelector('#jump').onclick=()=>{if(!driving)jump=1};
 function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,(now-last)/1000);last=now;
  if(driving){if(Math.abs(move.y)>.03){yaw+=move.x*dt*1.7*Math.sign(move.y);speed=THREE.MathUtils.damp(speed,move.y*13,2.5,dt)}else speed=THREE.MathUtils.damp(speed,0,2,dt);car.rotation.y=yaw;car.position.x-=Math.sin(yaw)*speed*dt;car.position.z-=Math.cos(yaw)*speed*dt}
  else{const s=Math.sin(camera.rotation.y),c=Math.cos(camera.rotation.y);player.position.x+=(move.x*c-move.y*s)*5*dt;player.position.z+=(-move.x*s-move.y*c)*5*dt;if(Math.hypot(move.x,move.y)>.1)player.rotation.y=Math.atan2(-move.x,-move.y)}
+ updateCharacterAnimation(!driving&&Math.hypot(move.x,move.y)>.1);
+ if(characterMixer)characterMixer.update(dt);
  if(jump>0){player.position.y=Math.sin((1-jump)*Math.PI)*1.1;jump-=dt*1.7;if(jump<=0){jump=0;player.position.y=0}}
  const target=driving?car.position:player.position;const angle=driving?yaw:camera.rotation.y;
  const desired=new THREE.Vector3(target.x+Math.sin(angle)*9,5.5,target.z+Math.cos(angle)*9);
