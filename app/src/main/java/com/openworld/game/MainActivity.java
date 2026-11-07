@@ -32,7 +32,11 @@ public class MainActivity extends Activity {
                 activePointerId = e.getPointerId(0);
                 lastTouchX = e.getX(0);
                 lastTouchY = e.getY(0);
-                updateTouchControl(v.getWidth(), v.getHeight(), lastTouchX, lastTouchY, false);
+                if (lastTouchX / Math.max(1f, v.getWidth()) < 0.48f) {
+                    updateTouchControl(v.getWidth(), v.getHeight(), lastTouchX, lastTouchY);
+                } else {
+                    renderer.setMovement(0f, 0f);
+                }
                 return true;
             }
 
@@ -43,7 +47,7 @@ public class MainActivity extends Activity {
                     float y = e.getY(index);
                     boolean onLeft = x / Math.max(1f, v.getWidth()) < 0.48f;
                     if (onLeft) {
-                        updateTouchControl(v.getWidth(), v.getHeight(), x, y, false);
+                        updateTouchControl(v.getWidth(), v.getHeight(), x, y);
                     } else {
                         renderer.setMovement(0f, 0f);
                         renderer.rotateCamera(lastTouchX - x, lastTouchY - y);
@@ -92,7 +96,7 @@ public class MainActivity extends Activity {
         ContentUpdater.check(this, message -> runOnUiThread(() -> status.setText(message)));
     }
 
-    private void updateTouchControl(int width, int height, float x, float y, boolean unused) {
+    private void updateTouchControl(int width, int height, float x, float y) {
         float nx = x / Math.max(1f, width);
         float ny = y / Math.max(1f, height);
         renderer.setMovement((nx - 0.20f) * 5.0f, (0.78f - ny) * 5.0f);
