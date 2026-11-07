@@ -6,24 +6,25 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 import android.webkit.WebChromeClient;
-import android.webkit.WebResourceError;
-import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import android.widget.Toast;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends Activity {
     private static final String GAME_URL = "https://raw.githubusercontent.com/ffuxyxfyxhcocyocg-art/OPEN-WORLD-ANDROID/main/app/src/main/assets/game/index.html";
+    private static final String BASE_URL = "https://raw.githubusercontent.com/ffuxyxfyxhcocyocg-art/OPEN-WORLD-ANDROID/main/app/src/main/assets/game/";
     private static final String VERSION_URL = "https://raw.githubusercontent.com/ffuxyxfyxhcocyocg-art/OPEN-WORLD-ANDROID/main/version.txt";
     private WebView gameView;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private String currentVersion = "";
-    private boolean showingLocalFallback = false;
-    private boolean remoteLoaded = false;
+    private String loadedHtml = "";
+    private boolean loadingRemote = false;
     private boolean checkingVersion = false;
 
     @Override protected void onCreate(Bundle state) {
@@ -44,53 +45,69 @@ public class MainActivity extends Activity {
         settings.setAllowContentAccess(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        gameView.setWebViewClient(new WebViewClient());
         gameView.setWebChromeClient(new WebChromeClient());
-        gameView.setWebViewClient(new WebViewClient() {
-            @Override public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-                if (url != null && url.startsWith("https://raw.githubusercontent.com/")) {
-                    remoteLoaded = true;
-                    showingLocalFallback = false;
-                }
-            }
-
-            @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                super.onReceivedError(view, request, error);
-                if (request != null && request.isForMainFrame() && !remoteLoaded && !showingLocalFallback) {
-                    showingLocalFallback = true;
-                    view.loadUrl("file:///android_asset/game/index.html");
-                }
-            }
-        });
         setContentView(gameView);
+        // Abre a cópia local imediatamente e substitui pela versão remota assim que baixar.
+        gameView.loadUrl("file:///android_asset/game/index.html");
         loadRemoteGame();
         checkRemoteVersion();
     }
 
-    private void loadRemoteGame() {
-        if (gameView == null) return;
-        remoteLoaded = false;
-        showingLocalFallback = false;
-        gameView.loadUrl(GAME_URL + "?hot=" + System.currentTimeMillis());
-    }
-
-    private String downloadVersion() throws Exception {
-        HttpURLConnection connection = (HttpURLConnection) new URL(VERSION_URL + "?t=" + System.currentTimeMillis()).openConnection();
-        connection.setConnectTimeout(10000);
-        connection.setReadTimeout(10000);
+    private String downloadText(String address) throws Exception {
+        HttpURLConnection connection = (HttpURLConnection) new URL(address + "?nocache=" + System.currentTimeMillis()).openConnection();
+        connection.setConnectTimeout(12000);
+        connection.setReadTimeout(15000);
         connection.setUseCaches(false);
-        connection.setRequestProperty("Cache-Control", "no-cache");
         connection.setInstanceFollowRedirects(true);
+        connection.setRequestProperty("Cache-Control", "no-cache, no-store");
+        connection.setRequestProperty("Pragma", "no-cache");
+        connection.setRequestProperty("User-Agent", "OpenWorldAndroid/2.0");
         try {
             int code = connection.getResponseCode();
             if (code != HttpURLConnection.HTTP_OK) throw new Exception("HTTP " + code);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), "UTF-8"));
-            String version = reader.readLine();
-            reader.close();
-            return version == null ? "" : version.trim();
+            InputStream input = connection.getInputStream();
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            int count;
+            while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+            input.close();
+            return new String(output.toByteArray(), StandardCharsets.UTF_8);
         } finally {
             connection.disconnect();
         }
+    }
+
+    private void loadRemoteGame() {
+        if (loadingRemote || gameView == null) return;
+        loadingRemote = true;
+        new Thread(() -> {
+            String html = null;
+            String failure = "";
+            try {
+                html = downloadText(GAME_URL);
+                if (html == null || !html.toLowerCase().contains("<html")) {
+                    throw new Exception("resposta não contém HTML");
+                }
+            } catch (Exception error) {
+                failure = error.getClass().getSimpleName() + ": " + error.getMessage();
+            }
+            final String result = html;
+            final String errorText = failure;
+            runOnUiThread(() -> {
+                loadingRemote = false;
+                if (gameView == null || isFinishing()) return;
+                if (result != null) {
+                    boolean changed = !result.equals(loadedHtml);
+                    loadedHtml = result;
+                    if (changed) {
+                        gameView.loadDataWithBaseURL(BASE_URL, result, "text/html", "UTF-8", null);
+                    }
+                } else if (loadedHtml.isEmpty()) {
+                    Toast.makeText(this, "Não foi possível atualizar o jogo: " + errorText, Toast.LENGTH_LONG).show();
+                }
+            });
+        }).start();
     }
 
     private void checkRemoteVersion() {
@@ -98,7 +115,7 @@ public class MainActivity extends Activity {
         checkingVersion = true;
         new Thread(() -> {
             String found = "";
-            try { found = downloadVersion(); } catch (Exception ignored) {}
+            try { found = downloadText(VERSION_URL).trim(); } catch (Exception ignored) {}
             final String version = found;
             runOnUiThread(() -> {
                 checkingVersion = false;
