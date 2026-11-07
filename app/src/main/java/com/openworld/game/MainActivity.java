@@ -43,7 +43,10 @@ public class MainActivity extends Activity {
         gameView.setWebViewClient(new WebViewClient());
         gameView.setWebChromeClient(new WebChromeClient());
         setContentView(gameView);
-        loadLatestGame(false);
+        // Abre imediatamente a cópia local para o mapa não ficar em branco
+        // enquanto a versão remota é baixada.
+        gameView.loadUrl("file:///android_asset/game/index.html");
+        loadLatestGame(true);
     }
 
     private String downloadText(String address) throws Exception {
