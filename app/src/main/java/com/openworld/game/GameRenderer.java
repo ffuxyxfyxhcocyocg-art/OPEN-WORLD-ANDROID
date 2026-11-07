@@ -3,6 +3,7 @@ package com.openworld.game;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
+import org.json.JSONObject;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -16,10 +17,28 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     private FloatBuffer cube;
     private final float[] projection=new float[16], view=new float[16], model=new float[16], vp=new float[16], mvp=new float[16];
     private volatile float moveX, moveY, yaw;
+    private volatile int gridRadius = 5;
+    private volatile float blockSpacing = 8f, roadWidth = 9f, buildingMinHeight = 3.5f, buildingHeightStep = 1.2f;
+    private volatile float cameraDistance = 10f, cameraHeight = 7.2f;
     private float playerX, playerZ;
 
     public void setMovement(float x,float y){ moveX=Math.max(-1,Math.min(1,x)); moveY=Math.max(-1,Math.min(1,y)); }
     public void rotateCamera(float dx,float dy){ yaw += dx*0.004f; }
+
+    public void setWorldConfig(JSONObject world) {
+        if (world == null) return;
+        JSONObject s = world.optJSONObject("world_settings");
+        if (s == null) return;
+        gridRadius = clamp(s.optInt("grid_radius", 5), 2, 10);
+        blockSpacing = clamp(s.optDouble("block_spacing", 8.0), 5f, 20f);
+        roadWidth = clamp(s.optDouble("road_width", 9.0), 5f, 16f);
+        buildingMinHeight = clamp(s.optDouble("building_min_height", 3.5), 2f, 12f);
+        buildingHeightStep = clamp(s.optDouble("building_height_step", 1.2), 0.3f, 4f);
+        cameraDistance = clamp(s.optDouble("camera_distance", 10.0), 5f, 18f);
+        cameraHeight = clamp(s.optDouble("camera_height", 7.2), 3f, 14f);
+    }
+    private float clamp(double v, float min, float max) { return (float)Math.max(min, Math.min(max, v)); }
+    private int clamp(int v, int min, int max) { return Math.max(min, Math.min(max, v)); }
 
     @Override public void onSurfaceCreated(GL10 gl,EGLConfig config){
         GLES20.glClearColor(0.48f,0.70f,0.88f,1f);
@@ -48,25 +67,26 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     @Override public void onDrawFrame(GL10 gl){
         playerX += moveX*0.075f;
         playerZ -= moveY*0.075f;
-        float cx=playerX+(float)Math.sin(yaw)*10f;
-        float cz=playerZ+(float)Math.cos(yaw)*10f;
-        Matrix.setLookAtM(view,0,cx,7.2f,cz,playerX,0.8f,playerZ,0,1,0);
+        float cx=playerX+(float)Math.sin(yaw)*cameraDistance;
+        float cz=playerZ+(float)Math.cos(yaw)*cameraDistance;
+        Matrix.setLookAtM(view,0,cx,cameraHeight,cz,playerX,0.8f,playerZ,0,1,0);
         Matrix.multiplyMM(vp,0,projection,0,view,0);
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT|GLES20.GL_DEPTH_BUFFER_BIT);
         GLES20.glUseProgram(program);
-        box(0,-0.3f,0,100,0.5f,100,0.23f,0.43f,0.25f);
-        box(0,-0.02f,0,9,0.08f,100,0.16f,0.17f,0.19f);
-        box(0,-0.01f,0,100,0.08f,9,0.16f,0.17f,0.19f);
-        for(int i=-6;i<=6;i++){
-            box(i*8f,0.03f,0,0.10f,0.02f,100,0.92f,0.82f,0.48f);
-            box(0,0.03f,i*8f,100,0.02f,0.10f,0.92f,0.82f,0.48f);
+        float span = (gridRadius * 2 + 2) * blockSpacing;
+        box(0,-0.3f,0,span,0.5f,span,0.23f,0.43f,0.25f);
+        box(0,-0.02f,0,roadWidth,0.08f,span,0.16f,0.17f,0.19f);
+        box(0,-0.01f,0,span,0.08f,roadWidth,0.16f,0.17f,0.19f);
+        for(int i=-gridRadius;i<=gridRadius;i++){
+            box(i*blockSpacing,0.03f,0,0.10f,0.02f,span,0.92f,0.82f,0.48f);
+            box(0,0.03f,i*blockSpacing,span,0.02f,0.10f,0.92f,0.82f,0.48f);
         }
-        for(int x=-5;x<=5;x++) for(int z=-5;z<=5;z++){
+        for(int x=-gridRadius;x<=gridRadius;x++) for(int z=-gridRadius;z<=gridRadius;z++){
             if(x==0||z==0) continue;
-            float h=3.5f+((x*x+z*z)%5)*1.2f;
+            float h=buildingMinHeight+((x*x+z*z)%5)*buildingHeightStep;
             float shade=0.40f+((x-z+12)%4)*0.045f;
-            box(x*8f,h/2f,z*8f,4.6f,h,4.6f,shade,shade*0.94f,shade*0.84f);
-            box(x*8f,h+0.12f,z*8f,4.8f,0.24f,4.8f,0.18f,0.20f,0.23f);
+            box(x*blockSpacing,h/2f,z*blockSpacing,blockSpacing*0.575f,h,blockSpacing*0.575f,shade,shade*0.94f,shade*0.84f);
+            box(x*blockSpacing,h+0.12f,z*blockSpacing,blockSpacing*0.60f,0.24f,blockSpacing*0.60f,0.18f,0.20f,0.23f);
         }
         box(playerX,0.95f,playerZ,0.62f,1.5f,0.42f,0.10f,0.24f,0.82f);
         box(playerX,1.90f,playerZ,0.46f,0.46f,0.46f,0.78f,0.57f,0.42f);
