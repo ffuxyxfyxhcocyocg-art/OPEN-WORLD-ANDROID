@@ -1,9 +1,9 @@
 {
   "world_name": "OPEN WORLD",
-  "content_version": 3,
-  "description": "Configuração remota do mundo; alterações compatíveis são aplicadas ao abrir o jogo.",
+  "content_version": 2,
+  "description": "Configuração remota do mapa inicial.",
   "world_settings": {
-    "grid_radius": 6,
+    "grid_radius": 5,
     "block_spacing": 8.0,
     "road_width": 9.0,
     "building_min_height": 3.5,
