@@ -155,7 +155,8 @@ for(let i=-4;i<=3;i++)for(let j=-4;j<=3;j++){
  const cellX=i*40,cellZ=j*40;
  if(Math.hypot(cellX+20,cellZ+20)>166)continue;
  // Só duas casas por quadra: jardins e espaços vazios deixam a cidade respirar.
- if(((i+4)%3)!==0 || ((j+4)%3)!==0)continue; // Casas bem espaçadas: só alguns pontos de interesse.\n const spots=[[-11,-11]]; // Uma casa por quadra selecionada.
+ if(((i+4)%3)!==0 || ((j+4)%3)!==0)continue; // Casas bem espaçadas: só alguns pontos de interesse.
+ const spots=[[-11,-11]]; // Uma casa por quadra selecionada.
  for(let n=0;n<spots.length;n++){
   const [ox,oz]=spots[n],x=cellX+20+ox,z=cellZ+20+oz;
   if(Math.hypot(x,z)>170)continue;
