@@ -14,7 +14,8 @@
 #nub{position:absolute;width:54px;height:54px;border-radius:50%;left:37px;top:37px;background:#fff9;border:2px solid white}
 .btn{position:absolute;right:18px;bottom:25px;width:100px;height:52px;border:1px solid #ffffff99;border-radius:12px;background:#142333dd;color:white;font-weight:bold;pointer-events:auto}
 #jump{bottom:88px}#hint{position:absolute;left:18px;bottom:166px;color:white;text-shadow:0 1px 3px #000;font-size:10px}
-#live-update{display:none;position:fixed;z-index:20;top:54px;left:50%;transform:translateX(-50%);padding:10px 14px;border-radius:10px;background:#f3c94b;color:#171717;font-weight:bold;font-size:12px;border:0;box-shadow:0 3px 12px #0006}\n</style>
+#live-update{display:none;position:fixed;z-index:20;top:54px;left:50%;transform:translateX(-50%);padding:10px 14px;border-radius:10px;background:#f3c94b;color:#171717;font-weight:bold;font-size:12px;border:0;box-shadow:0 3px 12px #0006}
+</style>
 </head>
 <body><div id="game"></div><div id="top">OPEN WORLD • ANDROID</div><div id="status">Carregando mundo 3D...</div><button id="live-update" onclick="location.reload()">ATUALIZAÇÃO DISPONÍVEL • TOQUE PARA APLICAR</button>
 <div id="controls"><div id="stick"><div id="nub"></div></div><div id="hint">TOQUE E ARRASTE PARA MOVER</div><button class="btn" id="jump">PULAR</button><button class="btn" id="vehicle">ENTRAR</button></div>
@@ -39,51 +40,74 @@ const ground=new THREE.Mesh(new THREE.PlaneGeometry(220,220),mat(0x528b54));grou
 function block(x,z,w,d,h,color){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(color));m.position.set(x,h/2,z);scene.add(m);return m}
 block(0,.0,9,.0+180,.12,0x30343a);block(0,0,180,9,.12,0x30343a);
 
-// Prédios 3D detalhados: fachadas, andares, janelas, molduras, vitrines e telhados.
-const glassMat=new THREE.MeshStandardMaterial({color:0x6ca6bd,metalness:.28,roughness:.22});
-const frameMat=mat(0xe1d7c5),darkGlass=new THREE.MeshStandardMaterial({color:0x243b4a,roughness:.3,metalness:.15});
-function detailedBuilding(x,z,w,d,h,color,seed){
- const wallMat=mat(color),floorH=2.65,floors=Math.max(2,Math.floor(h/floorH));
- const shell=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),wallMat);shell.position.set(x,h/2,z);scene.add(shell);
- const base=new THREE.Mesh(new THREE.BoxGeometry(w+.22,.32,d+.22),mat(0x777b7b));base.position.set(x,.16,z);scene.add(base);
- const roof=new THREE.Mesh(new THREE.BoxGeometry(w+.32,.28,d+.32),frameMat);roof.position.set(x,h+.14,z);scene.add(roof);
- // Fachadas norte/sul
- for(let side of [-1,1]){
-  for(let floor=0;floor<floors;floor++){
-   const y=1.05+floor*floorH;
-   for(let col=0;col<3;col++){
-    const wx=x+(col-1)*(w/3);
-    const win=new THREE.Mesh(new THREE.BoxGeometry(1.65,1.45,.09),glassMat);
-    win.position.set(wx,y,z+side*(d/2+.055));scene.add(win);
-    const sill=new THREE.Mesh(new THREE.BoxGeometry(1.82,.12,.18),frameMat);
-    sill.position.set(wx,y-.78,z+side*(d/2+.08));scene.add(sill);
-    const mullion=new THREE.Mesh(new THREE.BoxGeometry(.07,1.48,.12),frameMat);
-    mullion.position.set(wx,y,z+side*(d/2+.12));scene.add(mullion);
+// Cidade 3D com volumes arquitetônicos e janelas/balcões instanciados (leve para celular).
+const glassMat=new THREE.MeshStandardMaterial({color:0x3f7188,metalness:.22,roughness:.24});
+const frameMat=mat(0xd9d1c2), balconyMat=mat(0x777d80), roofMat=mat(0x6d7477);
+const windowGeo=new THREE.BoxGeometry(1.55,1.45,.14);
+const sideWindowGeo=new THREE.BoxGeometry(.14,1.35,1.8);
+const sillGeo=new THREE.BoxGeometry(1.82,.16,.34);
+const sideSillGeo=new THREE.BoxGeometry(.34,.16,2.0);
+const balconyGeo=new THREE.BoxGeometry(2.25,.16,.9);
+const doorGeo=new THREE.BoxGeometry(1.35,2.2,.16);
+const windowInstances=new THREE.InstancedMesh(windowGeo,glassMat,5000);
+const sideWindowInstances=new THREE.InstancedMesh(sideWindowGeo,glassMat,5000);
+const sillInstances=new THREE.InstancedMesh(sillGeo,frameMat,5000);
+const sideSillInstances=new THREE.InstancedMesh(sideSillGeo,frameMat,5000);
+const balconyInstances=new THREE.InstancedMesh(balconyGeo,balconyMat,2500);
+const doorInstances=new THREE.InstancedMesh(doorGeo,new THREE.MeshStandardMaterial({color:0x203847,metalness:.15,roughness:.28}),500);
+const dummy=new THREE.Object3D();
+let wi=0,swi=0,si=0,ssi=0,bi=0,di=0;
+function put(mesh,index,x,y,z,ry=0,sx=1,sy=1,sz=1){
+ dummy.position.set(x,y,z);dummy.rotation.set(0,ry,0);dummy.scale.set(sx,sy,sz);dummy.updateMatrix();mesh.setMatrixAt(index,dummy.matrix);
+}
+function detailedBuilding(x,z,w,d,h,color,index){
+ const floors=Math.max(2,Math.floor(h/2.7));
+ const shell=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(color));shell.position.set(x,h/2,z);scene.add(shell);
+ // Base, cobertura e platibanda com profundidade real
+ const base=new THREE.Mesh(new THREE.BoxGeometry(w+.55,.38,d+.55),mat(0x777b7b));base.position.set(x,.19,z);scene.add(base);
+ const roof=new THREE.Mesh(new THREE.BoxGeometry(w+.7,.34,d+.7),roofMat);roof.position.set(x,h+.17,z);scene.add(roof);
+ const parapet=new THREE.Mesh(new THREE.BoxGeometry(w+.35,.72,.28),frameMat);parapet.position.set(x,h+.65,z-d/2);scene.add(parapet);
+ // Volume lateral deslocado para quebrar o formato de caixa simples
+ if(index%3===0){const wing=new THREE.Mesh(new THREE.BoxGeometry(w*.32,h*.72,d*.7),mat(color-0x080808));wing.position.set(x+w*.34,h*.36,z-d*.12);scene.add(wing);}
+ // Colunas e faixas verticais na fachada
+ for(const side of [-1,1]){
+  const pilaster=new THREE.Mesh(new THREE.BoxGeometry(.22,h,.24),frameMat);pilaster.position.set(x+side*(w/2-.12),h/2,z+d/2+.08);scene.add(pilaster);
+ }
+ for(let floor=0;floor<floors;floor++){
+  const y=1.15+floor*2.7;
+  for(let col=0;col<3;col++){
+   const wx=x+(col-1)*(w/3);
+   for(const side of [-1,1]){
+    put(windowInstances,wi++,wx,y,z+side*(d/2+.09));
+    put(sillInstances,si++,wx,y-.8,z+side*(d/2+.18));
+    if(floor>0 && (col===0||col===2)){
+     put(balconyInstances,bi++,wx,y-.72,z+side*(d/2+.42),0,1,1,1);
+    }
    }
   }
- }
- // Fachadas laterais com janelas menores
- for(let side of [-1,1]){
-  for(let floor=0;floor<floors;floor++)for(let col=0;col<2;col++){
-   const win=new THREE.Mesh(new THREE.BoxGeometry(.09,1.35,2.05),glassMat);
-   win.position.set(x+side*(w/2+.055),1.05+floor*floorH,z+(col-.5)*(d/2));scene.add(win);
-   const sill=new THREE.Mesh(new THREE.BoxGeometry(.18,.12,2.2),frameMat);
-   sill.position.set(x+side*(w/2+.08),.35+floor*floorH,z+(col-.5)*(d/2));scene.add(sill);
+  for(let col=0;col<2;col++)for(const side of [-1,1]){
+   put(sideWindowInstances,swi++,x+side*(w/2+.09),y,z+(col-.5)*(d*.55));
+   put(sideSillInstances,ssi++,x+side*(w/2+.18),y-.78,z+(col-.5)*(d*.55));
   }
  }
- // Entrada comercial e marquise
- const door=new THREE.Mesh(new THREE.BoxGeometry(1.25,2.15,.12),darkGlass);door.position.set(x,.98,z+d/2+.09);scene.add(door);
- const canopy=new THREE.Mesh(new THREE.BoxGeometry(w*.72,.18,1.05),mat(0x343e48));canopy.position.set(x,2.35,z+d/2+.52);scene.add(canopy);
- // Volume técnico no telhado e pequenos dutos
- const rooftop=new THREE.Mesh(new THREE.BoxGeometry(w*.38,.85,d*.42),mat(0x9b9b94));rooftop.position.set(x,h+.68,z);scene.add(rooftop);
- const vent=new THREE.Mesh(new THREE.BoxGeometry(.55,.5,.55),mat(0x626b70));vent.position.set(x+w*.28,h+.55,z-d*.22);scene.add(vent);
+ put(doorInstances,di++,x,.98,z+d/2+.12);
+ // Marquise comercial projetada para fora
+ const canopy=new THREE.Mesh(new THREE.BoxGeometry(w*.78,.22,1.15),mat(index%2?0x384c5b:0x8a5c42));canopy.position.set(x,2.35,z+d/2+.58);scene.add(canopy);
+ // Caixa d'água, casa de máquinas e dutos no telhado
+ const rooftop=new THREE.Mesh(new THREE.BoxGeometry(w*.34,.9,d*.38),mat(0x999b96));rooftop.position.set(x-w*.18,h+.78,z);scene.add(rooftop);
+ const vent=new THREE.Mesh(new THREE.CylinderGeometry(.18,.22,.8,8),mat(0x555d62));vent.position.set(x+w*.28,h+.62,z-d*.2);scene.add(vent);
 }
-for(let i=-4;i<=4;i++){for(let j=-4;j<=4;j++){
+let buildingIndex=0;
+for(let i=-4;i<=4;i++)for(let j=-4;j<=4;j++){
  if(i===0||j===0)continue;
- const x=i*17,z=j*17,h=8+((i*i+j*j)%5)*2.3;
+ const x=i*17,z=j*17,h=9+((i*i+j*j)%5)*2.4;
  const colors=[0xb9b4a8,0x9cabb4,0xc2b39d,0x8d9caa,0xb5a7a0];
- detailedBuilding(x,z,11,11,h,colors[(i-j+25)%colors.length],i*9+j);
-}}
+ detailedBuilding(x,z,11,11,h,colors[(i-j+25)%colors.length],buildingIndex++);
+}
+for(const mesh of [windowInstances,sideWindowInstances,sillInstances,sideSillInstances,balconyInstances,doorInstances]){
+ mesh.count=mesh===windowInstances?wi:mesh===sideWindowInstances?swi:mesh===sillInstances?si:mesh===sideSillInstances?ssi:mesh===balconyInstances?bi:di;
+ mesh.instanceMatrix.needsUpdate=true;scene.add(mesh);
+}
 const player=new THREE.Group();scene.add(player);
 const body=new THREE.Mesh(new THREE.BoxGeometry(.65,1,.38),mat(0x174eaa));body.position.y=1;player.add(body);
 const head=new THREE.Mesh(new THREE.SphereGeometry(.23,12,10),mat(0xc99570));head.position.y=1.68;player.add(head);
@@ -158,7 +182,7 @@ document.querySelector('#vehicle').onclick=()=>{if(driving){driving=false;player
 document.querySelector('#jump').onclick=()=>{if(!driving)jump=1};
 function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,(now-last)/1000);last=now;
  if(driving){if(Math.abs(move.y)>.03){yaw+=move.x*dt*1.7*Math.sign(move.y);speed=THREE.MathUtils.damp(speed,move.y*13,2.5,dt)}else speed=THREE.MathUtils.damp(speed,0,2,dt);car.rotation.y=yaw;car.position.x-=Math.sin(yaw)*speed*dt;car.position.z-=Math.cos(yaw)*speed*dt}
- else{const s=Math.sin(camera.rotation.y),c=Math.cos(camera.rotation.y);player.position.x+=(move.x*c-move.y*s)*5*dt;player.position.z+=(-move.x*s-move.y*c)*5*dt;if(Math.hypot(move.x,move.y)>.1)player.rotation.y=Math.atan2(-move.x,-move.y)}
+ else{const forward=camera.getWorldDirection(new THREE.Vector3());forward.y=0;forward.normalize();const right=new THREE.Vector3(-forward.z,0,forward.x);const direction=right.multiplyScalar(move.x).add(forward.multiplyScalar(move.y));if(direction.lengthSq()>.0001){direction.normalize();player.position.addScaledVector(direction,5*dt);player.rotation.y=Math.atan2(direction.x,direction.z)}}
  updateCharacterAnimation(!driving&&Math.hypot(move.x,move.y)>.1);
  if(characterMixer)characterMixer.update(dt);
  if(jump>0){player.position.y=Math.sin((1-jump)*Math.PI)*1.1;jump-=dt*1.7;if(jump<=0){jump=0;player.position.y=0}}
