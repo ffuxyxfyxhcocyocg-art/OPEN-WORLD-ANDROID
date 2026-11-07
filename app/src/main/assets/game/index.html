@@ -242,7 +242,7 @@ for(const mesh of [windowInstances,sideWindowInstances,sillInstances,sideSillIns
 }
 const player=new THREE.Group();player.rotation.set(0,0,0);player.castShadow=true;player.receiveShadow=true;scene.add(player);
 // Âncora independente para o GLB: evita herdar transformações inesperadas do grupo de controle.
-const characterAnchor=new THREE.Group();characterAnchor.name='CharacterWorldAnchor';scene.add(characterAnchor);
+// O personagem é filho direto do grupo player.
 const body=new THREE.Mesh(new THREE.BoxGeometry(.65,1,.38),mat(0x174eaa));body.position.y=1;player.add(body);
 const head=new THREE.Mesh(new THREE.SphereGeometry(.23,12,10),mat(0xc99570));head.position.y=1.68;player.add(head);
 player.position.set(0,0,3);
@@ -301,8 +301,8 @@ function attachCharacter(model,animations=[],label='Personagem GLB'){
  visualRoot.visible=true;
  visualRoot.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
  player.rotation.set(0,0,0);
- characterAnchor.visible=true;
- characterAnchor.add(visualRoot);
+ // Anexado diretamente ao jogador: posição, rotação e câmera usam o mesmo nó.
+ player.add(visualRoot);
  characterReady=true;
  characterMixer=new THREE.AnimationMixer(model);
  const idleClip=animations.find(a=>/idle|breath|stand/i.test(a.name))||animations[0];
@@ -326,7 +326,7 @@ function loadFallbackFBX(){
   status.textContent='Midas GLB não encontrado • usando personagem reserva FBX';
  },undefined,error=>{console.error('Falha no FBX reserva:',error);status.textContent='Falha ao carregar personagem 3D';});
 }
-glbCharacterLoader.load(midasUrl+'?v=22',gltf=>{
+glbCharacterLoader.load(midasUrl+'?v=24',gltf=>{
  attachCharacter(gltf.scene,gltf.animations,'Midas GLB carregado');
 },undefined,error=>{
  console.warn('Midas GLB ainda não está no repositório; ativando reserva FBX.',error);
@@ -366,7 +366,7 @@ function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,(now-
  updateCharacterAnimation(!driving&&Math.hypot(move.x,move.y)>.1);
  if(characterMixer)characterMixer.update(dt);
  if(jump>0){player.position.y=Math.sin((1-jump)*Math.PI)*1.1;jump-=dt*1.7;if(jump<=0){jump=0;player.position.y=0}}
- characterAnchor.position.copy(player.position);characterAnchor.rotation.y=player.rotation.y;
+ // O personagem acompanha player diretamente.
  const target=driving?car.position:player.position;const angle=driving?yaw:cameraYaw;
  const desired=new THREE.Vector3(target.x+Math.sin(angle)*14,8.2,target.z+Math.cos(angle)*14);
  camera.position.lerp(desired,.12);camera.lookAt(target.x,1.6,target.z);
