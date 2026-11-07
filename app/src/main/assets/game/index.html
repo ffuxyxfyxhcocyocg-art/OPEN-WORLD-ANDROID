@@ -14,13 +14,14 @@
 #nub{position:absolute;width:54px;height:54px;border-radius:50%;left:37px;top:37px;background:#fff9;border:2px solid white}
 .btn{position:absolute;right:18px;bottom:25px;width:100px;height:52px;border:1px solid #ffffff99;border-radius:12px;background:#142333dd;color:white;font-weight:bold;pointer-events:auto}
 #jump{bottom:88px}#hint{position:absolute;left:18px;bottom:166px;color:white;text-shadow:0 1px 3px #000;font-size:10px}
-</style>
+#live-update{display:none;position:fixed;z-index:20;top:54px;left:50%;transform:translateX(-50%);padding:10px 14px;border-radius:10px;background:#f3c94b;color:#171717;font-weight:bold;font-size:12px;border:0;box-shadow:0 3px 12px #0006}\n</style>
 </head>
-<body><div id="game"></div><div id="top">OPEN WORLD • ANDROID</div><div id="status">Carregando mundo 3D...</div>
+<body><div id="game"></div><div id="top">OPEN WORLD • ANDROID</div><div id="status">Carregando mundo 3D...</div><button id="live-update" onclick="location.reload()">ATUALIZAÇÃO DISPONÍVEL • TOQUE PARA APLICAR</button>
 <div id="controls"><div id="stick"><div id="nub"></div></div><div id="hint">TOQUE E ARRASTE PARA MOVER</div><button class="btn" id="jump">PULAR</button><button class="btn" id="vehicle">ENTRAR</button></div>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import {FBXLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/FBXLoader.js';
+import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 const status=document.querySelector('#status'), root=document.querySelector('#game');
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x8fc3df);scene.fog=new THREE.Fog(0x8fc3df,65,180);
 const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,250);
@@ -118,4 +119,16 @@ function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,(now-
 }requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 status.textContent='Mundo pronto • aproxime-se do carro para entrar';
+</script><script>
+(async function liveUpdateCheck(){
+ const versionUrl='https://raw.githubusercontent.com/ffuxyxfyxhcocyocg-art/OPEN-WORLD-ANDROID/main/version.txt';
+ let current='1';
+ try{const r=await fetch(versionUrl+'?t='+Date.now(),{cache:'no-store'});if(r.ok)current=(await r.text()).trim();}catch(e){}
+ setInterval(async()=>{
+  try{const r=await fetch(versionUrl+'?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;
+   const latest=(await r.text()).trim();
+   if(latest&&latest!==current){document.getElementById('live-update').style.display='block';}
+  }catch(e){}
+ },60000);
+})();
 </script></body></html>
