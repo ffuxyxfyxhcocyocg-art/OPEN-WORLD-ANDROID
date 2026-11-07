@@ -2,6 +2,8 @@ package com.openworld.game;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.opengl.GLSurfaceView;
 import android.graphics.Color;
 import android.view.Gravity;
@@ -10,6 +12,9 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 
 public class MainActivity extends Activity {
+    private static final long UPDATE_INTERVAL_MS = 30_000L;
+    private final Handler updateHandler = new Handler(Looper.getMainLooper());
+    private boolean updateLoopActive = false;
     private GLSurfaceView surface;
     private GameRenderer renderer;
     private TextView status;
@@ -17,6 +22,14 @@ public class MainActivity extends Activity {
     private int lookPointerId = -1;
     private float moveStartX, moveStartY;
     private float lastLookX, lastLookY;
+
+    private final Runnable updateLoop = new Runnable() {
+        @Override public void run() {
+            if (!updateLoopActive || isFinishing()) return;
+            checkRemoteContent();
+            updateHandler.postDelayed(this, UPDATE_INTERVAL_MS);
+        }
+    };
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -102,7 +115,7 @@ public class MainActivity extends Activity {
         root.addView(title, top);
 
         status = new TextView(this);
-        status.setText("Verificando conteúdo...");
+        status.setText("Preparando atualizações remotas...");
         status.setTextColor(Color.WHITE);
         status.setTextSize(11);
         status.setPadding(12, 8, 12, 8);
@@ -111,10 +124,14 @@ public class MainActivity extends Activity {
         bottom.bottomMargin = 10;
         root.addView(status, bottom);
         setContentView(root);
+    }
 
+    private void checkRemoteContent() {
+        if (status != null) status.setText("Verificando atualizações...");
         ContentUpdater.check(this, (message, world) -> runOnUiThread(() -> {
+            if (isFinishing() || surface == null || renderer == null) return;
             status.setText(message);
-            surface.queueEvent(() -> renderer.setWorldConfig(world));
+            if (world != null) surface.queueEvent(() -> renderer.setWorldConfig(world));
         }));
     }
 
@@ -123,15 +140,27 @@ public class MainActivity extends Activity {
     }
 
     @Override protected void onPause() {
-        super.onPause();
+        updateLoopActive = false;
+        updateHandler.removeCallbacks(updateLoop);
         movePointerId = -1;
         lookPointerId = -1;
         if (surface != null) surface.onPause();
         if (renderer != null) renderer.setMovement(0f, 0f);
+        super.onPause();
     }
 
     @Override protected void onResume() {
         super.onResume();
         if (surface != null) surface.onResume();
+        updateLoopActive = true;
+        updateHandler.removeCallbacks(updateLoop);
+        checkRemoteContent();
+        updateHandler.postDelayed(updateLoop, UPDATE_INTERVAL_MS);
+    }
+
+    @Override protected void onDestroy() {
+        updateLoopActive = false;
+        updateHandler.removeCallbacks(updateLoop);
+        super.onDestroy();
     }
 }
