@@ -37,19 +37,19 @@ scene.add(new THREE.HemisphereLight(0xffffff,0x64745c,2));
 const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(-45,75,35);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-145;sun.shadow.camera.right=145;sun.shadow.camera.top=145;sun.shadow.camera.bottom=-145;scene.add(sun);
 const mat=(c)=>new THREE.MeshStandardMaterial({color:c,roughness:.82});
 // Ilha tropical: oceano, praia clara, terreno verde e falésias em anel.
-const ocean=new THREE.Mesh(new THREE.PlaneGeometry(900,900),new THREE.MeshStandardMaterial({color:0x0756a8,roughness:.32,metalness:.12}));ocean.rotation.x=-Math.PI/2;ocean.position.y=-2.25;scene.add(ocean);
-const sand=new THREE.Mesh(new THREE.RingGeometry(116,132,160),new THREE.MeshStandardMaterial({color:0xe6d19a,roughness:1,side:THREE.DoubleSide}));sand.rotation.x=-Math.PI/2;sand.position.y=-.13;scene.add(sand);
-const island=new THREE.Mesh(new THREE.CircleGeometry(120,160),new THREE.MeshStandardMaterial({color:0x579447,roughness:1}));island.rotation.x=-Math.PI/2;island.position.y=-.08;scene.add(island);
+const ocean=new THREE.Mesh(new THREE.PlaneGeometry(1200,1200),new THREE.MeshStandardMaterial({color:0x0756a8,roughness:.32,metalness:.12}));ocean.rotation.x=-Math.PI/2;ocean.position.y=-2.25;scene.add(ocean);
+const sand=new THREE.Mesh(new THREE.RingGeometry(176,194,192),new THREE.MeshStandardMaterial({color:0xe6d19a,roughness:1,side:THREE.DoubleSide}));sand.rotation.x=-Math.PI/2;sand.position.y=-.13;scene.add(sand);
+const island=new THREE.Mesh(new THREE.CircleGeometry(180,192),new THREE.MeshStandardMaterial({color:0x579447,roughness:1}));island.rotation.x=-Math.PI/2;island.position.y=-.08;scene.add(island);
 const cliffMat=mat(0x77716a);
-for(let n=0;n<96;n++){const a=n/96*Math.PI*2,r=124+Math.sin(n*2.31)*2.6;const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(2.7+(n%4)*.45,0),cliffMat);rock.position.set(Math.cos(a)*r,-.7+(n%3)*.15,Math.sin(a)*r);rock.scale.set(1.35,.9,1.1);rock.rotation.y=a;scene.add(rock);}
+for(let n=0;n<128;n++){const a=n/128*Math.PI*2,r=184+Math.sin(n*2.31)*3.4;const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(2.7+(n%4)*.45,0),cliffMat);rock.position.set(Math.cos(a)*r,-.7+(n%3)*.15,Math.sin(a)*r);rock.scale.set(1.35,.9,1.1);rock.rotation.y=a;scene.add(rock);}
 function block(x,z,w,d,h,color){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(color));m.position.set(x,h/2,z);scene.add(m);return m}
 // Malha de ruas em quadras com faixas e cruzamentos.
 const roadMat=mat(0x343b43),lineMat=new THREE.MeshStandardMaterial({color:0xf5e6a6,roughness:.8});
-for(let k=-3;k<=3;k++){
- const p=k*34;
- block(p,0,6.4,230,.16,0x343b43);block(0,p,230,6.4,.16,0x343b43);
- for(let q=-3;q<=3;q++){
-  const t=q*34;
+for(let k=-4;k<=4;k++){
+ const p=k*40;
+ block(p,0,7,320,.18,0x343b43);block(0,p,320,7,.18,0x343b43);
+ for(let q=-4;q<=4;q++){
+  const t=q*40;
   if(k!==3){const dash1=new THREE.Mesh(new THREE.BoxGeometry(.13,.025,3.2),lineMat);dash1.position.set(p,.09,t+9);scene.add(dash1);const dash2=dash1.clone();dash2.position.z=t-9;scene.add(dash2);}
   const dash3=new THREE.Mesh(new THREE.BoxGeometry(3.2,.025,.13),lineMat);dash3.position.set(t,.09,p+9);scene.add(dash3);const dash4=dash3.clone();dash4.position.z=p-9;scene.add(dash4);
  }
@@ -119,23 +119,23 @@ function detailedBuilding(x,z,w,d,h,color,index){
  const vent=new THREE.Mesh(new THREE.CylinderGeometry(.18,.22,.8,8),mat(0x555d62));vent.position.set(x+w*.28,h+.62,z-d*.2);scene.add(vent);
 }
 let buildingIndex=0;
-for(let i=-3;i<=2;i++)for(let j=-3;j<=2;j++){
- const x=i*34+17,z=j*34+17;
- if(Math.hypot(x,z)>105)continue;
+for(let i=-4;i<=3;i++)for(let j=-4;j<=3;j++){
+ const x=i*40+20,z=j*40+20;
+ if(Math.hypot(x,z)>165)continue;
  const h=6.5+((i*i+j*j+Math.abs(i-j))%5)*1.45;
  const colors=[0xd8c5a5,0xc8d0d0,0xd6b99a,0xb4c2bd,0xc9aaa0,0xbeb7a3,0xe2d9c8,0x9eafb6,0xc9c1b1,0xb9a9a0];
- detailedBuilding(x,z,9.5+(i%2)*1.4,9.5+(j%2)*1.4,h,colors[(i-j+30)%colors.length],buildingIndex++);
+ detailedBuilding(x,z,10.5+(i%2)*1.8,10.5+(j%2)*1.8,h,colors[(i-j+30)%colors.length],buildingIndex++);
 }
 // Casas térreas e sobrados coloridos para dar escala de bairro costeiro.
 // Bairro residencial: casas menores em lotes separados, com quintal e calçada.
-for(let i=-3;i<=2;i++)for(let j=-3;j<=2;j++){
- const cellX=i*34,cellZ=j*34;
- if(Math.hypot(cellX+17,cellZ+17)>108)continue;
+for(let i=-4;i<=3;i++)for(let j=-4;j<=3;j++){
+ const cellX=i*40,cellZ=j*40;
+ if(Math.hypot(cellX+20,cellZ+20)>166)continue;
  // Mantém o centro das quadras livres para ruas internas e evita sobreposição com os prédios.
  const spots=[[-9,-9],[9,-9],[-9,9],[9,9]];
  for(let n=0;n<spots.length;n++){
-  const [ox,oz]=spots[n],x=cellX+17+ox,z=cellZ+17+oz;
-  if(Math.hypot(x,z)>111)continue;
+  const [ox,oz]=spots[n],x=cellX+20+ox,z=cellZ+20+oz;
+  if(Math.hypot(x,z)>170)continue;
   const w=5.6+(n%2)*.65,d=5.8+((i+j+n+12)%2)*.55,h=3.8+((i*3+j+n+30)%3)*.45;
   const colors=[0xf0d7ad,0xe9e1d0,0xd9b59c,0xc6d7d2,0xe6c6a5,0xd5c8a8,0xb8c8cb];
   const house=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(colors[(i-j+n+30)%colors.length]));house.position.set(x,h/2,z);house.castShadow=true;house.receiveShadow=true;scene.add(house);
@@ -155,7 +155,7 @@ for(let i=-3;i<=2;i++)for(let j=-3;j<=2;j++){
 }
 // Árvores low-poly espalhadas nas áreas verdes, longe das ruas principais.
 function makeTree(x,z,scale=1){const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.18,.28,1.7,6),mat(0x765037));trunk.position.set(x,.8*scale,z);trunk.scale.setScalar(scale);scene.add(trunk);for(let k=0;k<3;k++){const crown=new THREE.Mesh(new THREE.IcosahedronGeometry(1.25-k*.12,1),mat([0x28763b,0x398b42,0x4b9848][k]));crown.position.set(x+(k-1)*.16,1.85*scale+k*.55*scale,z);crown.scale.set(1.05*scale,1.1*scale,1.05*scale);scene.add(crown);}}
-for(let i=0;i<105;i++){const a=i*2.399,r=58+(i%9)*5.4,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.abs(x%34)<6||Math.abs(z%34)<6||Math.hypot(x,z)>114)continue;makeTree(x,z,.72+(i%4)*.12);}
+for(let i=0;i<190;i++){const a=i*2.399,r=92+(i%9)*7.2,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.abs(x%40)<7||Math.abs(z%40)<7||Math.hypot(x,z)>174)continue;makeTree(x,z,.72+(i%4)*.12);}
 // Morro rochoso e farol listrado no extremo noroeste.
 const hill=new THREE.Mesh(new THREE.ConeGeometry(19,16,9),mat(0x657b55));hill.position.set(-88,7,-88);hill.scale.set(1.15,1,1);scene.add(hill);
 const lighthouse=new THREE.Group();lighthouse.position.set(-88,14,-88);scene.add(lighthouse);
@@ -257,8 +257,8 @@ function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,(now-
  if(characterMixer)characterMixer.update(dt);
  if(jump>0){player.position.y=Math.sin((1-jump)*Math.PI)*1.1;jump-=dt*1.7;if(jump<=0){jump=0;player.position.y=0}}
  const target=driving?car.position:player.position;const angle=driving?yaw:camera.rotation.y;
- const desired=new THREE.Vector3(target.x+Math.sin(angle)*9,5.5,target.z+Math.cos(angle)*9);
- camera.position.lerp(desired,.12);camera.lookAt(target.x,1.1,target.z);
+ const desired=new THREE.Vector3(target.x+Math.sin(angle)*14,8.2,target.z+Math.cos(angle)*14);
+ camera.position.lerp(desired,.12);camera.lookAt(target.x,1.6,target.z);
  renderer.render(scene,camera);
 }requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
