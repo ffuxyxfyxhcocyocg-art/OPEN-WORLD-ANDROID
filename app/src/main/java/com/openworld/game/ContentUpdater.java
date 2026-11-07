@@ -30,28 +30,38 @@ public final class ContentUpdater {
             try {
                 JSONObject manifest = new JSONObject(new String(download(MANIFEST_URL), StandardCharsets.UTF_8));
                 int remoteVersion = manifest.getInt("version");
+                if (remoteVersion < 1) throw new Exception("Versão remota inválida");
                 int localVersion = app.getSharedPreferences("content", Context.MODE_PRIVATE).getInt("version", 0);
                 if (remoteVersion > localVersion || !current.exists()) {
                     if (!dir.exists() && !dir.mkdirs()) throw new Exception("Não foi possível criar pasta");
                     String path = manifest.getString("content_url");
                     String expected = manifest.optString("sha256", "");
                     if (!path.startsWith("https://raw.githubusercontent.com/")) throw new Exception("URL não permitida");
+                    if (!expected.matches("(?i)[0-9a-f]{64}")) throw new Exception("Hash SHA-256 ausente ou inválido");
                     byte[] bytes = download(path);
-                    if (!expected.isEmpty() && !expected.equalsIgnoreCase(sha256(bytes))) throw new Exception("SHA-256 inválido");
+                    if (!expected.equalsIgnoreCase(sha256(bytes))) throw new Exception("SHA-256 inválido");
                     JSONObject parsed = new JSONObject(new String(bytes, StandardCharsets.UTF_8));
                     WorldConfig.fromJson(parsed);
                     File temp = new File(dir, "world.json.tmp");
+                    File backup = new File(dir, "world.json.bak");
                     try (FileOutputStream out = new FileOutputStream(temp)) { out.write(bytes); out.getFD().sync(); }
-                    if (current.exists() && !current.delete()) throw new Exception("Não foi possível substituir conteúdo");
-                    if (!temp.renameTo(current)) throw new Exception("Não foi possível finalizar atualização");
+
+                    if (backup.exists() && !backup.delete()) throw new Exception("Não foi possível limpar backup");
+                    if (current.exists() && !current.renameTo(backup)) throw new Exception("Não foi possível proteger conteúdo atual");
+                    if (!temp.renameTo(current)) {
+                        if (backup.exists()) backup.renameTo(current);
+                        throw new Exception("Não foi possível finalizar atualização");
+                    }
+                    if (backup.exists()) backup.delete();
+
                     app.getSharedPreferences("content", Context.MODE_PRIVATE).edit().putInt("version", remoteVersion).apply();
-                    callback.onResult("Conteúdo remoto aplicado • v" + remoteVersion, parsed);
+                    callback.onResult("Hot Update aplicado • v" + remoteVersion, parsed);
                     return;
                 }
-                callback.onResult("Conteúdo atualizado • v" + localVersion, readWorld(current));
+                callback.onResult("Sem novas atualizações • v" + localVersion, readWorld(current));
             } catch (Exception ex) {
                 try {
-                    if (current.exists()) callback.onResult("Sem internet • usando mapa salvo", readWorld(current));
+                    if (current.exists()) callback.onResult("Offline • usando mapa salvo", readWorld(current));
                     else callback.onResult("Conteúdo remoto indisponível • mapa padrão", null);
                 } catch (Exception ignored) {
                     callback.onResult("Conteúdo remoto indisponível • mapa padrão", null);
