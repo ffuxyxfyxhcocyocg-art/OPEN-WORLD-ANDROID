@@ -280,14 +280,20 @@ function attachCharacter(model,animations=[],label='Personagem GLB'){
  visualRoot.scale.setScalar(scale);
  visualRoot.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
  model.traverse(o=>{
-  if(!o.isMesh)return;
-  o.visible=true;o.castShadow=true;o.receiveShadow=true;
-  if(o.geometry){o.geometry.computeBoundingSphere();}
-  const materials=Array.isArray(o.material)?o.material:[o.material];
-  materials.forEach(m=>{if(!m)return;m.visible=true;m.transparent=false;m.opacity=1;m.depthWrite=true;m.side=THREE.DoubleSide;m.roughness=.82;m.metalness=0;if(m.map)m.map.colorSpace=THREE.SRGBColorSpace;m.needsUpdate=true;});
+  o.visible=true;
+  if(o.isMesh){
+   o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;
+   if(o.geometry){o.geometry.computeBoundingSphere();}
+   const materials=Array.isArray(o.material)?o.material:[o.material];
+   materials.forEach(m=>{if(!m)return;m.visible=true;m.transparent=false;m.opacity=1;m.alphaTest=0;m.depthWrite=true;m.side=THREE.DoubleSide;m.roughness=.82;m.metalness=0;if(m.map)m.map.colorSpace=THREE.SRGBColorSpace;m.needsUpdate=true;});
+  }
+  if(o.isSkinnedMesh&&o.skeleton)o.skeleton.update();
  });
  visualRoot.add(model);
- body.visible=false;head.visible=false;
+ // Mantém um corpo-reserva dourado visível até confirmar a renderização do GLB.
+ body.material.color.setHex(0xb89a42);head.material.color.setHex(0xc99570);
+ body.visible=true;head.visible=true;
+ player.visible=true;visualRoot.visible=true;
  player.rotation.set(0,0,0);player.add(visualRoot);characterReady=true;
  characterMixer=new THREE.AnimationMixer(model);
  const idleClip=animations.find(a=>/idle|breath|stand/i.test(a.name))||animations[0];
