@@ -275,9 +275,23 @@ function attachCharacter(model,animations=[],label='Personagem GLB'){
   visualRoot.name='MidasVisualRoot';
   visualRoot.add(model);
   model.updateMatrixWorld(true);
-  const bounds=new THREE.Box3().setFromObject(model);
-  const size=bounds.getSize(new THREE.Vector3());
-  if(!Number.isFinite(size.y)||size.y<0.05||size.y>10000)throw new Error('Altura inválida no modelo GLB');
+  // Calcula os limites a partir das geometrias dos meshes. Em GLBs com
+  // esqueleto/animação, o Box3 automático pode retornar altura zero ou inválida.
+  let bounds=new THREE.Box3();
+  model.traverse(o=>{
+   if(!o.isMesh||!o.geometry) return;
+   const geometry=o.geometry;
+   if(!geometry.boundingBox) geometry.computeBoundingBox();
+   if(!geometry.boundingBox) return;
+   const meshBounds=geometry.boundingBox.clone().applyMatrix4(o.matrixWorld);
+   if(Number.isFinite(meshBounds.min.x)&&Number.isFinite(meshBounds.min.y)&&Number.isFinite(meshBounds.min.z)&&Number.isFinite(meshBounds.max.x)&&Number.isFinite(meshBounds.max.y)&&Number.isFinite(meshBounds.max.z)) bounds.union(meshBounds);
+  });
+  let size=bounds.getSize(new THREE.Vector3());
+  if(!Number.isFinite(size.y)||size.y<0.05){
+   bounds=new THREE.Box3().setFromObject(model);
+   size=bounds.getSize(new THREE.Vector3());
+  }
+  if(!Number.isFinite(size.y)||size.y<0.05) throw new Error('não foi possível medir a altura ('+size.y+')');
   const center=bounds.getCenter(new THREE.Vector3());
   const scale=1.8/size.y;
   visualRoot.scale.setScalar(scale);
