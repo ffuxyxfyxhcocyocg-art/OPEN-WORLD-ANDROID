@@ -13,6 +13,8 @@ public class MainActivity extends Activity {
     private GLSurfaceView surface;
     private GameRenderer renderer;
     private TextView status;
+    private int activePointerId = -1;
+    private float lastTouchX, lastTouchY;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -22,20 +24,45 @@ public class MainActivity extends Activity {
         renderer = new GameRenderer();
         surface.setRenderer(renderer);
         surface.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
+
         surface.setOnTouchListener((v, e) -> {
-            float nx = e.getX() / Math.max(1f, v.getWidth());
-            float ny = e.getY() / Math.max(1f, v.getHeight());
-            if (nx < 0.48f) {
-                if (e.getActionMasked() == MotionEvent.ACTION_MOVE ||
-                    e.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                    renderer.setMovement((nx - 0.20f) * 5.0f, (0.78f - ny) * 5.0f);
-                } else if (e.getActionMasked() == MotionEvent.ACTION_UP ||
-                           e.getActionMasked() == MotionEvent.ACTION_CANCEL) {
+            int action = e.getActionMasked();
+
+            if (action == MotionEvent.ACTION_DOWN) {
+                activePointerId = e.getPointerId(0);
+                lastTouchX = e.getX(0);
+                lastTouchY = e.getY(0);
+                updateTouchControl(v.getWidth(), v.getHeight(), lastTouchX, lastTouchY, false);
+                return true;
+            }
+
+            if (action == MotionEvent.ACTION_MOVE && activePointerId != -1) {
+                int index = e.findPointerIndex(activePointerId);
+                if (index >= 0) {
+                    float x = e.getX(index);
+                    float y = e.getY(index);
+                    boolean onLeft = x / Math.max(1f, v.getWidth()) < 0.48f;
+                    if (onLeft) {
+                        updateTouchControl(v.getWidth(), v.getHeight(), x, y, false);
+                    } else {
+                        renderer.setMovement(0f, 0f);
+                        renderer.rotateCamera(lastTouchX - x, lastTouchY - y);
+                    }
+                    lastTouchX = x;
+                    lastTouchY = y;
+                }
+                return true;
+            }
+
+            if (action == MotionEvent.ACTION_UP ||
+                action == MotionEvent.ACTION_CANCEL ||
+                action == MotionEvent.ACTION_POINTER_UP) {
+                if (action != MotionEvent.ACTION_POINTER_UP ||
+                    e.getPointerId(e.getActionIndex()) == activePointerId) {
+                    activePointerId = -1;
                     renderer.setMovement(0f, 0f);
                 }
-            } else if (e.getActionMasked() == MotionEvent.ACTION_MOVE) {
-                renderer.rotateCamera(e.getHistoricalX(0) - e.getX(),
-                                      e.getHistoricalY(0) - e.getY());
+                return true;
             }
             return true;
         });
@@ -65,6 +92,20 @@ public class MainActivity extends Activity {
         ContentUpdater.check(this, message -> runOnUiThread(() -> status.setText(message)));
     }
 
-    @Override protected void onPause() { super.onPause(); if (surface != null) surface.onPause(); }
-    @Override protected void onResume() { super.onResume(); if (surface != null) surface.onResume(); }
+    private void updateTouchControl(int width, int height, float x, float y, boolean unused) {
+        float nx = x / Math.max(1f, width);
+        float ny = y / Math.max(1f, height);
+        renderer.setMovement((nx - 0.20f) * 5.0f, (0.78f - ny) * 5.0f);
+    }
+
+    @Override protected void onPause() {
+        super.onPause();
+        if (surface != null) surface.onPause();
+        if (renderer != null) renderer.setMovement(0f, 0f);
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        if (surface != null) surface.onResume();
+    }
 }
