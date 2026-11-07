@@ -10,15 +10,16 @@
 #top{position:fixed;top:12px;left:50%;transform:translateX(-50%);color:white;background:#101820bb;padding:9px 14px;border-radius:9px;font-size:12px;white-space:nowrap}
 #status{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);color:white;background:#101820aa;padding:8px 12px;border-radius:8px;font-size:11px}
 #controls{position:fixed;inset:0;pointer-events:none}
-#stick{position:absolute;left:22px;bottom:26px;width:132px;height:132px;border-radius:50%;background:#10182066;border:2px solid #ffffff88;pointer-events:auto;touch-action:none}
+#look{position:absolute;left:42%;right:0;top:0;bottom:150px;pointer-events:auto;touch-action:none;z-index:1}
+#stick{position:absolute;left:22px;bottom:26px;width:132px;height:132px;border-radius:50%;background:#10182066;border:2px solid #ffffff88;pointer-events:auto;touch-action:none;z-index:2}
 #nub{position:absolute;width:54px;height:54px;border-radius:50%;left:37px;top:37px;background:#fff9;border:2px solid white}
-.btn{position:absolute;right:18px;bottom:25px;width:100px;height:52px;border:1px solid #ffffff99;border-radius:12px;background:#142333dd;color:white;font-weight:bold;pointer-events:auto}
+.btn{position:absolute;right:18px;bottom:25px;width:100px;height:52px;border:1px solid #ffffff99;border-radius:12px;background:#142333dd;color:white;font-weight:bold;pointer-events:auto;z-index:3}
 #jump{bottom:88px}#hint{position:absolute;left:18px;bottom:166px;color:white;text-shadow:0 1px 3px #000;font-size:10px}
 #live-update{display:none;position:fixed;z-index:20;top:54px;left:50%;transform:translateX(-50%);padding:10px 14px;border-radius:10px;background:#f3c94b;color:#171717;font-weight:bold;font-size:12px;border:0;box-shadow:0 3px 12px #0006}
 </style>
 </head>
 <body><div id="game"></div><div id="top">OPEN WORLD • ANDROID</div><div id="status">Carregando mundo 3D...</div><button id="live-update" onclick="location.reload()">ATUALIZAÇÃO DISPONÍVEL • TOQUE PARA APLICAR</button>
-<div id="controls"><div id="stick"><div id="nub"></div></div><div id="hint">TOQUE E ARRASTE PARA MOVER</div><button class="btn" id="jump">PULAR</button><button class="btn" id="vehicle">ENTRAR</button></div>
+<div id="controls"><div id="look" aria-label="Arraste para girar a câmera"></div><div id="stick"><div id="nub"></div></div><div id="hint">ESQUERDA: MOVER • DIREITA: GIRAR CÂMERA</div><button class="btn" id="jump">PULAR</button><button class="btn" id="vehicle">ENTRAR</button></div>
 <!-- Compatibilidade com cópias antigas do script que ainda consultam spots. -->
 <script>var spots = [];</script>
 <script type="importmap">
@@ -284,8 +285,12 @@ new GLTFLoader().load('https://raw.githubusercontent.com/shliamin/JS-3D-Car/main
 // Colisão circular contra os limites dos edifícios; movimento por eixo evita prender nas quinas.
 function blockedAt(x,z,r){return collisionRects.some(b=>x+r>b.minX&&x-r<b.maxX&&z+r>b.minZ&&z-r<b.maxZ)}
 function moveWithCollision(obj,dx,dz,r){const nx=obj.position.x+dx;if(!blockedAt(nx,obj.position.z,r))obj.position.x=nx;const nz=obj.position.z+dz;if(!blockedAt(obj.position.x,nz,r))obj.position.z=nz;}
-let driving=false,speed=0,yaw=0,jump=0,move={x:0,y:0},last=performance.now();
-const stick=document.querySelector('#stick'),nub=document.querySelector('#nub');let pointer=null;
+let driving=false,speed=0,yaw=0,cameraYaw=0,jump=0,move={x:0,y:0},last=performance.now();
+const stick=document.querySelector('#stick'),nub=document.querySelector('#nub'),look=document.querySelector('#look');let pointer=null,lookPointer=null,lastLookX=0;
+look.addEventListener('pointerdown',e=>{lookPointer=e.pointerId;lastLookX=e.clientX;look.setPointerCapture(lookPointer);e.preventDefault()});
+look.addEventListener('pointermove',e=>{if(e.pointerId!==lookPointer)return;const dx=e.clientX-lastLookX;lastLookX=e.clientX;cameraYaw-=dx*.008;e.preventDefault()});
+function releaseLook(e){if(e.pointerId===lookPointer)lookPointer=null}
+look.addEventListener('pointerup',releaseLook);look.addEventListener('pointercancel',releaseLook);
 function setStick(e){const r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,len=Math.hypot(dx,dy),max=43,k=Math.min(1,max/(len||1));move.x=dx*k/max;move.y=-dy*k/max;nub.style.transform='translate('+dx*k+'px,'+dy*k+'px)'}
 stick.addEventListener('pointerdown',e=>{pointer=e.pointerId;stick.setPointerCapture(pointer);setStick(e)});
 stick.addEventListener('pointermove',e=>{if(e.pointerId===pointer)setStick(e)});
@@ -299,7 +304,7 @@ function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,(now-
  updateCharacterAnimation(!driving&&Math.hypot(move.x,move.y)>.1);
  if(characterMixer)characterMixer.update(dt);
  if(jump>0){player.position.y=Math.sin((1-jump)*Math.PI)*1.1;jump-=dt*1.7;if(jump<=0){jump=0;player.position.y=0}}
- const target=driving?car.position:player.position;const angle=driving?yaw:camera.rotation.y;
+ const target=driving?car.position:player.position;const angle=driving?yaw:cameraYaw;
  const desired=new THREE.Vector3(target.x+Math.sin(angle)*14,8.2,target.z+Math.cos(angle)*14);
  camera.position.lerp(desired,.12);camera.lookAt(target.x,1.6,target.z);
  renderer.render(scene,camera);
