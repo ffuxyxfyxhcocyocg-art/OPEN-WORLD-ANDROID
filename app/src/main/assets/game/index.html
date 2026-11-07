@@ -121,7 +121,7 @@ function detailedBuilding(x,z,w,d,h,color,index){
 let buildingIndex=0;
 for(let i=-4;i<=3;i++)for(let j=-4;j<=3;j++){
  // Poucos edifícios: um por conjunto de quatro quadras alternadas, preservando áreas abertas.
- if(((i+4)%4)!==0 || ((j+4)%4)!==0)continue;
+ if(i!==-1 || j!==-1)continue; // Apenas um prédio de referência na cidade.
  const x=i*40+20,z=j*40+20;
  if(Math.hypot(x,z)>165)continue;
  const h=6.5+((i*i+j*j+Math.abs(i-j))%5)*1.45;
@@ -155,7 +155,7 @@ for(let i=-4;i<=3;i++)for(let j=-4;j<=3;j++){
  const cellX=i*40,cellZ=j*40;
  if(Math.hypot(cellX+20,cellZ+20)>166)continue;
  // Só duas casas por quadra: jardins e espaços vazios deixam a cidade respirar.
- const spots=[[-11,-11]]; // Uma casa por quadra residencial.
+ if(((i+4)%3)!==0 || ((j+4)%3)!==0)continue; // Casas bem espaçadas: só alguns pontos de interesse.\n const spots=[[-11,-11]]; // Uma casa por quadra selecionada.
  for(let n=0;n<spots.length;n++){
   const [ox,oz]=spots[n],x=cellX+20+ox,z=cellZ+20+oz;
   if(Math.hypot(x,z)>170)continue;
