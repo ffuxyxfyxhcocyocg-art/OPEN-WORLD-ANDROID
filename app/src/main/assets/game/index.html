@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#101820">
+<title>Open World</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#86b5d2;font-family:Arial,sans-serif;touch-action:none}
+#game{position:fixed;inset:0}canvas{display:block;width:100%;height:100%}
+#top{position:fixed;top:12px;left:50%;transform:translateX(-50%);color:white;background:#101820bb;padding:9px 14px;border-radius:9px;font-size:12px;white-space:nowrap}
+#status{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);color:white;background:#101820aa;padding:8px 12px;border-radius:8px;font-size:11px}
+#controls{position:fixed;inset:0;pointer-events:none}
+#stick{position:absolute;left:22px;bottom:26px;width:132px;height:132px;border-radius:50%;background:#10182066;border:2px solid #ffffff88;pointer-events:auto;touch-action:none}
+#nub{position:absolute;width:54px;height:54px;border-radius:50%;left:37px;top:37px;background:#fff9;border:2px solid white}
+.btn{position:absolute;right:18px;bottom:25px;width:100px;height:52px;border:1px solid #ffffff99;border-radius:12px;background:#142333dd;color:white;font-weight:bold;pointer-events:auto}
+#jump{bottom:88px}#hint{position:absolute;left:18px;bottom:166px;color:white;text-shadow:0 1px 3px #000;font-size:10px}
+</style>
+</head>
+<body><div id="game"></div><div id="top">OPEN WORLD • ANDROID</div><div id="status">Carregando mundo 3D...</div>
+<div id="controls"><div id="stick"><div id="nub"></div></div><div id="hint">TOQUE E ARRASTE PARA MOVER</div><button class="btn" id="jump">PULAR</button><button class="btn" id="vehicle">ENTRAR</button></div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+const status=document.querySelector('#status'), root=document.querySelector('#game');
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x8fc3df);scene.fog=new THREE.Fog(0x8fc3df,65,180);
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,250);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;root.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xffffff,0x64745c,2));
+const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(-25,45,20);scene.add(sun);
+const mat=(c)=>new THREE.MeshStandardMaterial({color:c,roughness:.82});
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(220,220),mat(0x528b54));ground.rotation.x=-Math.PI/2;ground.position.y=-.08;scene.add(ground);
+function block(x,z,w,d,h,color){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(color));m.position.set(x,h/2,z);scene.add(m);return m}
+block(0,.0,9,.0+180,.12,0x30343a);block(0,0,180,9,.12,0x30343a);
+for(let i=-4;i<=4;i++){for(let j=-4;j<=4;j++){if(i===0||j===0)continue;const x=i*17,z=j*17,h=7+((i*i+j*j)%5)*2;block(x,z,11,11,h,[0xb9b4a8,0x9cabb4,0xc2b39d,0x8d9caa][(i-j+20)%4]);}}
+const player=new THREE.Group();scene.add(player);
+const body=new THREE.Mesh(new THREE.BoxGeometry(.65,1,.38),mat(0x174eaa));body.position.y=1;player.add(body);
+const head=new THREE.Mesh(new THREE.SphereGeometry(.23,12,10),mat(0xc99570));head.position.y=1.68;player.add(head);
+player.position.set(0,0,3);
+let car=new THREE.Group();scene.add(car);car.position.set(0,0,-5.5);
+const carBody=new THREE.Mesh(new THREE.BoxGeometry(2,0.62,4),new THREE.MeshStandardMaterial({color:0xb91e22,metalness:.55,roughness:.3}));carBody.position.y=.68;car.add(carBody);
+const cab=new THREE.Mesh(new THREE.BoxGeometry(1.48,.72,1.9),new THREE.MeshStandardMaterial({color:0x1b303e,metalness:.2,roughness:.25}));cab.position.set(0,1.28,-.12);car.add(cab);
+let carLoaded=false;
+new GLTFLoader().load('https://raw.githubusercontent.com/shliamin/JS-3D-Car/main/models/ferrari.glb',g=>{
+ const model=g.scene;const box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3());
+ const scale=4.1/Math.max(size.x,size.y,size.z);model.scale.setScalar(scale);
+ const b2=new THREE.Box3().setFromObject(model),center=b2.getCenter(new THREE.Vector3());
+ model.position.set(-center.x*scale,-b2.min.y*scale,-center.z*scale);
+ car.clear();car.add(model);carLoaded=true;status.textContent='Ferrari 3D carregada • entre no veículo';
+},undefined,e=>{status.textContent='Carro provisório ativo • falha ao carregar modelo remoto';});
+let driving=false,speed=0,yaw=0,jump=0,move={x:0,y:0},last=performance.now();
+const stick=document.querySelector('#stick'),nub=document.querySelector('#nub');let pointer=null;
+function setStick(e){const r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,len=Math.hypot(dx,dy),max=43,k=Math.min(1,max/(len||1));move.x=dx*k/max;move.y=-dy*k/max;nub.style.transform='translate('+dx*k+'px,'+dy*k+'px)'}
+stick.addEventListener('pointerdown',e=>{pointer=e.pointerId;stick.setPointerCapture(pointer);setStick(e)});
+stick.addEventListener('pointermove',e=>{if(e.pointerId===pointer)setStick(e)});
+function release(e){if(e.pointerId===pointer){pointer=null;move={x:0,y:0};nub.style.transform=''}}
+stick.addEventListener('pointerup',release);stick.addEventListener('pointercancel',release);
+document.querySelector('#vehicle').onclick=()=>{if(driving){driving=false;player.position.copy(car.position);player.position.x+=Math.cos(yaw)*2;player.position.z+=Math.sin(yaw)*2;document.querySelector('#vehicle').textContent='ENTRAR'}else if(player.position.distanceTo(car.position)<5){driving=true;player.position.copy(car.position);document.querySelector('#vehicle').textContent='SAIR'}};
+document.querySelector('#jump').onclick=()=>{if(!driving)jump=1};
+function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,(now-last)/1000);last=now;
+ if(driving){if(Math.abs(move.y)>.03){yaw+=move.x*dt*1.7*Math.sign(move.y);speed=THREE.MathUtils.damp(speed,move.y*13,2.5,dt)}else speed=THREE.MathUtils.damp(speed,0,2,dt);car.rotation.y=yaw;car.position.x-=Math.sin(yaw)*speed*dt;car.position.z-=Math.cos(yaw)*speed*dt}
+ else{const s=Math.sin(camera.rotation.y),c=Math.cos(camera.rotation.y);player.position.x+=(move.x*c-move.y*s)*5*dt;player.position.z+=(-move.x*s-move.y*c)*5*dt;if(Math.hypot(move.x,move.y)>.1)player.rotation.y=Math.atan2(-move.x,-move.y)}
+ if(jump>0){player.position.y=Math.sin((1-jump)*Math.PI)*1.1;jump-=dt*1.7;if(jump<=0){jump=0;player.position.y=0}}
+ const target=driving?car.position:player.position;const angle=driving?yaw:camera.rotation.y;
+ const desired=new THREE.Vector3(target.x+Math.sin(angle)*9,5.5,target.z+Math.cos(angle)*9);
+ camera.position.lerp(desired,.12);camera.lookAt(target.x,1.1,target.z);
+ renderer.render(scene,camera);
+}requestAnimationFrame(animate);
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+status.textContent='Mundo pronto • aproxime-se do carro para entrar';
+</script></body></html>
