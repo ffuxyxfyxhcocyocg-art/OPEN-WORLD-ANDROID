@@ -319,12 +319,31 @@ function attachCharacter(model,animations=[],label='Personagem GLB'){
   status.textContent='Midas GLB não encontrado • usando personagem reserva FBX';
  },undefined,error=>{console.error('Falha no FBX reserva:',error);status.textContent='Falha ao carregar personagem 3D';});
 }
-glbCharacterLoader.load(midasUrl+'?v=25',gltf=>{
- attachCharacter(gltf.scene,gltf.animations,'Midas GLB carregado');
-},undefined,error=>{
- console.warn('Midas GLB ainda não está no repositório; ativando reserva FBX.',error);
- loadFallbackFBX();
-});
+async function loadMidasGLB(){
+ const url=midasUrl+'?v=26&t='+Date.now();
+ try{
+  status.textContent='Baixando personagem Midas...';
+  const response=await fetch(url,{cache:'no-store'});
+  if(!response.ok)throw new Error('HTTP '+response.status+' ao buscar midas.glb');
+  const data=await response.arrayBuffer();
+  if(data.byteLength<20)throw new Error('Arquivo GLB vazio/incompleto ('+data.byteLength+' bytes)');
+  if(new DataView(data).getUint32(0,true)!==0x46546C67)throw new Error('Arquivo recebido não possui assinatura GLB válida');
+  status.textContent='Midas recebido • interpretando modelo...';
+  glbCharacterLoader.parse(data,'',gltf=>{
+   try{attachCharacter(gltf.scene,gltf.animations,'Midas GLB carregado');}
+   catch(error){console.error('Erro ao montar Midas:',error);status.textContent='Erro ao montar Midas: '+(error.message||'modelo inválido')+' • reserva FBX';loadFallbackFBX();}
+  },error=>{
+   console.error('Erro ao interpretar Midas GLB:',error);
+   status.textContent='GLB inválido: '+(error.message||'falha de leitura')+' • reserva FBX';
+   loadFallbackFBX();
+  });
+ }catch(error){
+  console.error('Falha no download do Midas GLB:',error);
+  status.textContent='Falha Midas: '+(error.message||'erro de rede')+' • reserva FBX';
+  loadFallbackFBX();
+ }
+}
+loadMidasGLB();
 
 let car=new THREE.Group();scene.add(car);car.position.set(0,0,-5.5);
 const carBody=new THREE.Mesh(new THREE.BoxGeometry(2,0.62,4),new THREE.MeshStandardMaterial({color:0xb91e22,metalness:.55,roughness:.3}));carBody.position.y=.68;car.add(carBody);
