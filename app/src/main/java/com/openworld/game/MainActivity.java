@@ -11,13 +11,20 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 public class MainActivity extends Activity {
     private static final String GAME_URL = "https://raw.githubusercontent.com/ffuxyxfyxhcocyocg-art/OPEN-WORLD-ANDROID/main/app/src/main/assets/game/index.html";
+    private static final String VERSION_URL = "https://raw.githubusercontent.com/ffuxyxfyxhcocyocg-art/OPEN-WORLD-ANDROID/main/version.txt";
     private WebView gameView;
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private String currentVersion = "";
     private boolean showingLocalFallback = false;
     private boolean remoteLoaded = false;
+    private boolean checkingVersion = false;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -57,6 +64,7 @@ public class MainActivity extends Activity {
         });
         setContentView(gameView);
         loadRemoteGame();
+        checkRemoteVersion();
     }
 
     private void loadRemoteGame() {
@@ -66,15 +74,48 @@ public class MainActivity extends Activity {
         gameView.loadUrl(GAME_URL + "?hot=" + System.currentTimeMillis());
     }
 
+    private String downloadVersion() throws Exception {
+        HttpURLConnection connection = (HttpURLConnection) new URL(VERSION_URL + "?t=" + System.currentTimeMillis()).openConnection();
+        connection.setConnectTimeout(10000);
+        connection.setReadTimeout(10000);
+        connection.setUseCaches(false);
+        connection.setRequestProperty("Cache-Control", "no-cache");
+        connection.setInstanceFollowRedirects(true);
+        try {
+            int code = connection.getResponseCode();
+            if (code != HttpURLConnection.HTTP_OK) throw new Exception("HTTP " + code);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), "UTF-8"));
+            String version = reader.readLine();
+            reader.close();
+            return version == null ? "" : version.trim();
+        } finally {
+            connection.disconnect();
+        }
+    }
+
+    private void checkRemoteVersion() {
+        if (checkingVersion) return;
+        checkingVersion = true;
+        new Thread(() -> {
+            String found = "";
+            try { found = downloadVersion(); } catch (Exception ignored) {}
+            final String version = found;
+            runOnUiThread(() -> {
+                checkingVersion = false;
+                if (version.isEmpty() || isFinishing()) return;
+                if (currentVersion.isEmpty()) {
+                    currentVersion = version;
+                } else if (!currentVersion.equals(version)) {
+                    currentVersion = version;
+                    loadRemoteGame();
+                }
+            });
+        }).start();
+    }
+
     private final Runnable updateCheck = new Runnable() {
         @Override public void run() {
-            if (!isFinishing() && gameView != null && !showingLocalFallback) {
-                // Atualiza a página remota sem depender de cache HTTP antigo.
-                loadRemoteGame();
-            } else if (!isFinishing() && gameView != null) {
-                // Se iniciou pelo HTML local, tenta novamente buscar a versão remota.
-                loadRemoteGame();
-            }
+            checkRemoteVersion();
             handler.postDelayed(this, 60000);
         }
     };
