@@ -277,21 +277,31 @@ function attachCharacter(model,animations=[],label='Personagem GLB'){
   model.updateMatrixWorld(true);
   // Calcula os limites a partir das geometrias dos meshes. Em GLBs com
   // esqueleto/animação, o Box3 automático pode retornar altura zero ou inválida.
-  let bounds=new THREE.Box3();
-  model.traverse(o=>{
-   if(!o.isMesh||!o.geometry) return;
-   const geometry=o.geometry;
-   if(!geometry.boundingBox) geometry.computeBoundingBox();
-   if(!geometry.boundingBox) return;
-   const meshBounds=geometry.boundingBox.clone().applyMatrix4(o.matrixWorld);
-   if(Number.isFinite(meshBounds.min.x)&&Number.isFinite(meshBounds.min.y)&&Number.isFinite(meshBounds.min.z)&&Number.isFinite(meshBounds.max.x)&&Number.isFinite(meshBounds.max.y)&&Number.isFinite(meshBounds.max.z)) bounds.union(meshBounds);
-  });
+  // Mede o modelo já com a hierarquia e as matrizes atualizadas.
+  // setFromObject(..., true) percorre os vértices reais e considera a pose
+  // dos SkinnedMesh; boundingBox da geometria isolada pode ter altura zero
+  // em personagens GLB com esqueleto.
+  model.updateMatrixWorld(true);
+  model.traverse(o=>{if(o.isSkinnedMesh&&o.skeleton)o.skeleton.update();});
+  let bounds=new THREE.Box3().setFromObject(model,true);
   let size=bounds.getSize(new THREE.Vector3());
   if(!Number.isFinite(size.y)||size.y<0.05){
-   bounds=new THREE.Box3().setFromObject(model);
+   // Segunda tentativa: união dos limites locais de cada mesh transformados
+   // para o espaço do modelo, sem depender da caixa global do GLB.
+   bounds.makeEmpty();
+   model.traverse(o=>{
+    if(!o.isMesh||!o.geometry)return;
+    const geometry=o.geometry;
+    if(!geometry.boundingBox)geometry.computeBoundingBox();
+    if(!geometry.boundingBox)return;
+    const meshBounds=geometry.boundingBox.clone().applyMatrix4(o.matrixWorld);
+    if(Number.isFinite(meshBounds.min.x)&&Number.isFinite(meshBounds.min.y)&&Number.isFinite(meshBounds.min.z)&&Number.isFinite(meshBounds.max.x)&&Number.isFinite(meshBounds.max.y)&&Number.isFinite(meshBounds.max.z))bounds.union(meshBounds);
+   });
    size=bounds.getSize(new THREE.Vector3());
   }
-  if(!Number.isFinite(size.y)||size.y<0.05) throw new Error('não foi possível medir a altura ('+size.y+')');
+  if(bounds.isEmpty()||!Number.isFinite(size.y)||size.y<0.05||!Number.isFinite(size.x)||!Number.isFinite(size.z)){
+   throw new Error('limites 3D inválidos: '+size.x+' × '+size.y+' × '+size.z);
+  }
   const center=bounds.getCenter(new THREE.Vector3());
   const scale=1.8/size.y;
   visualRoot.scale.setScalar(scale);
