@@ -262,12 +262,28 @@ characterManager.setURLModifier(url=>{
 const characterLoader=new FBXLoader(characterManager);
 const glbCharacterLoader=new GLTFLoader();
 let characterMixer=null,idleAction=null,runAction=null,isMoving=false,characterReady=false,midasFailureReason='';
+let proceduralBones=[],gaitClock=0;
 function updateCharacterAnimation(running){
  if(running===isMoving)return;
  isMoving=running;
  const next=(running&&runAction)?runAction:idleAction;
  const previous=(running&&runAction)?idleAction:runAction;
  if(next){next.reset().fadeIn(.18).play();if(previous)previous.fadeOut(.18);}
+}
+// Animação procedural de caminhada para GLBs que chegam sem clips compatíveis.
+function updateProceduralWalk(dt,running){
+ if(!proceduralBones.length)return;
+ gaitClock+=dt*(running?9:2.1);
+ const swing=running?Math.sin(gaitClock)*.58:Math.sin(gaitClock)*.025;
+ for(const item of proceduralBones){
+  let angle=0;
+  if(item.kind==='thigh')angle=swing*item.side;
+  else if(item.kind==='knee')angle=Math.max(0,swing*item.side)*.9;
+  else if(item.kind==='arm')angle=-swing*item.side*.72;
+  else if(item.kind==='forearm')angle=Math.max(0,-swing*item.side)*.28;
+  else if(item.kind==='foot')angle=-swing*item.side*.16;
+  item.bone.quaternion.copy(item.base).multiply(new THREE.Quaternion().setFromAxisAngle(item.axis,angle));
+ }
 }
 function attachCharacter(model,animations=[],label='Personagem GLB'){
   // Mantém a hierarquia, os materiais e o esqueleto originais do arquivo GLB.
@@ -327,8 +343,25 @@ function attachCharacter(model,animations=[],label='Personagem GLB'){
   const runClip=animations.find(a=>/run|walk|jog/i.test(a.name));
   idleAction=idleClip?characterMixer.clipAction(idleClip):null;
   runAction=runClip?characterMixer.clipAction(runClip):null;
+  proceduralBones=[];
+  if(!runAction){
+   model.traverse(o=>{
+    if(!o.isBone)return;
+    const n=(o.name||'').toLowerCase().replace(/[^a-z0-9_.]/g,'');
+    const left=/left|(^|[_\.])l($|[_\.])|^l[_\.]/.test(n);
+    const right=/right|(^|[_\.])r($|[_\.])|^r[_\.]/.test(n);
+    const side=left?1:right?-1:0;
+    let kind='';
+    if(/upleg|upperleg|thigh|femur/.test(n))kind='thigh';
+    else if(/lowerleg|calf|shin|knee/.test(n))kind='knee';
+    else if(/upperarm|shoulder|arm/.test(n)&&!/forearm|lowerarm/.test(n))kind='arm';
+    else if(/forearm|lowerarm/.test(n))kind='forearm';
+    else if(/foot|ankle/.test(n))kind='foot';
+    if(kind&&side)proceduralBones.push({bone:o,base:o.quaternion.clone(),axis:new THREE.Vector3(1,0,0),kind,side});
+   });
+  }
   if(idleAction)idleAction.play();
-  status.textContent=label+(runAction?' • idle/corrida prontos':' • modelo carregado');
+  status.textContent=label+(runAction?' • animação de corrida':proceduralBones.length?' • caminhada procedural':' • modelo carregado');
  }function loadFallbackFBX(){
  characterLoader.load(characterBase+'Ch46_nonPBR.fbx',model=>{
   const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3());
@@ -403,6 +436,7 @@ function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,(now-
  else{const forward=camera.getWorldDirection(new THREE.Vector3());forward.y=0;forward.normalize();const right=new THREE.Vector3(-forward.z,0,forward.x);const direction=right.multiplyScalar(move.x).add(forward.multiplyScalar(move.y));if(direction.lengthSq()>.0001){direction.normalize();moveWithCollision(player,direction.x*5*dt,direction.z*5*dt,.48);player.rotation.y=Math.atan2(direction.x,direction.z)}}
  updateCharacterAnimation(!driving&&Math.hypot(move.x,move.y)>.1);
  if(characterMixer)characterMixer.update(dt);
+ if(characterReady&&!runAction)updateProceduralWalk(dt,!driving&&Math.hypot(move.x,move.y)>.1);
  if(jump>0){player.position.y=Math.sin((1-jump)*Math.PI)*1.1;jump-=dt*1.7;if(jump<=0){jump=0;player.position.y=0}}
  // O personagem acompanha player diretamente.
  const target=driving?car.position:player.position;const angle=driving?yaw:cameraYaw;
