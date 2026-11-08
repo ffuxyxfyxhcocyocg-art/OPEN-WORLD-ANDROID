@@ -518,7 +518,7 @@ document.querySelector("#match-info").appendChild(networkLine);
 const remotePlayers=new Map();
 let networkSocket=null,networkSnapshot=null,networkSendClock=0,networkPlayerId=null;
 const serverFromUrl=new URLSearchParams(location.search).get("server");
-const networkUrl=window.OPEN_WORLD_SERVER_URL||serverFromUrl||"";
+const networkUrl=window.OPEN_WORLD_SERVER_URL||serverFromUrl||"wss://open-world-br-realtime-lhld.onrender.com/ws";
 function connectOnline(){
  if(!networkUrl){networkLine.textContent="● OFFLINE • AGUARDANDO HOSPEDAGEM";return;}
  try{
