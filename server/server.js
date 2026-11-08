@@ -75,6 +75,7 @@ wss.on("connection", (ws) => {
     ws.close(1008, "room_full");
     return;
   }
+  if (players.size === 0) resetMatch();
   const id = require("node:crypto").randomUUID();
   const player = { id, name: "Jogador", x: 0, y: 0, z: 3, yaw: 0, vehicle: false, ws, lastUpdate: 0 };
   players.set(id, player);
