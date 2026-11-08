@@ -500,10 +500,37 @@ function refreshCombat(){document.querySelector('#health-num').textContent=comba
 document.querySelectorAll('.weapon-slot').forEach(b=>b.addEventListener('click',()=>{combat.slot=Number(b.dataset.slot);refreshCombat();combatToast(['RIFLE SELECIONADO','PISTOLA SELECIONADA','GRANADA SELECIONADA'][combat.slot]);}));
 document.querySelector('#fire').addEventListener('click',()=>{if(driving){combatToast('SAIA DO VEÍCULO PARA USAR');return;}if(combat.reloading)return;if(combat.ammo[combat.slot]<=0){combatToast('SEM MUNIÇÃO • RECARREGUE');return;}combat.ammo[combat.slot]--;refreshCombat();combatToast('DISPARO');});
 document.querySelector('#reload').addEventListener('click',()=>{if(combat.reloading||combat.slot===2)return;if(combat.ammo[combat.slot]>=([30,12][combat.slot])||combat.reserve[combat.slot]<=0){combatToast('NÃO PRECISA RECARREGAR');return;}combat.reloading=true;combatToast('RECARREGANDO...');setTimeout(()=>{const cap=[30,12][combat.slot],need=cap-combat.ammo[combat.slot],take=Math.min(need,combat.reserve[combat.slot]);combat.ammo[combat.slot]+=take;combat.reserve[combat.slot]-=take;combat.reloading=false;refreshCombat();combatToast('RECARREGADO');},1250);});
+
+/* Zona segura funcional: espera, fechamento gradual e dano fora do círculo. */
+const zone={startRadius:150,endRadius:24,wait:15,shrink:90,elapsed:0,radius:150,damageClock:0};
+const zoneRing=new THREE.Mesh(
+ new THREE.TorusGeometry(zone.startRadius,.72,8,160),
+ new THREE.MeshStandardMaterial({color:0xffc83d,emissive:0xff5a16,emissiveIntensity:1.15,transparent:true,opacity:.94})
+);
+zoneRing.rotation.x=Math.PI/2;zoneRing.position.set(0,.42,0);zoneRing.renderOrder=4;scene.add(zoneRing);
+const zoneWarning=document.querySelector('#zone-warning');
+function updateZone(dt){
+ zone.elapsed+=dt;
+ const closing=Math.max(0,zone.elapsed-zone.wait);
+ const progress=THREE.MathUtils.clamp(closing/zone.shrink,0,1);
+ zone.radius=THREE.MathUtils.lerp(zone.startRadius,zone.endRadius,progress);
+ zoneRing.scale.setScalar(zone.radius/zone.startRadius);
+ const remaining=zone.elapsed<zone.wait?zone.wait-zone.elapsed:Math.max(0,zone.shrink-closing);
+ const clock=String(Math.floor(remaining/60)).padStart(2,'0')+':'+String(Math.floor(remaining%60)).padStart(2,'0');
+ if(zone.elapsed<zone.wait)zoneWarning.textContent='⚠ ZONA FECHA EM '+clock;
+ else if(progress<1)zoneWarning.textContent='⚠ ZONA DIMINUINDO • '+clock;
+ else zoneWarning.textContent='⚠ ZONA FINAL • PERMANEÇA DENTRO';
+ const p=driving?car.position:player.position;
+ if(Math.hypot(p.x,p.z)>zone.radius){
+  zone.damageClock+=dt;
+  if(zone.damageClock>=1){zone.damageClock=0;combat.health=Math.max(0,combat.health-5);refreshCombat();if(combat.health===0)combatToast('VOCÊ FOI ELIMINADO PELA ZONA');}
+ }else zone.damageClock=0;
+}
 const mapCanvas=document.querySelector('#minimap'),mapCtx=mapCanvas.getContext('2d');
-function drawMinimap(){const w=mapCanvas.width,h=mapCanvas.height;mapCtx.clearRect(0,0,w,h);mapCtx.fillStyle='#263b35';mapCtx.fillRect(0,0,w,h);mapCtx.strokeStyle='#9aa89a';mapCtx.lineWidth=9;for(let i=0;i<5;i++){mapCtx.beginPath();mapCtx.moveTo(i*65-20,0);mapCtx.lineTo(i*65+55,h);mapCtx.stroke();}mapCtx.strokeStyle='#e8f0ff';mapCtx.lineWidth=3;mapCtx.beginPath();mapCtx.arc(w/2,h/2,91,0,Math.PI*2);mapCtx.stroke();const px=w/2+player.position.x*1.1,pz=h/2+player.position.z*1.1;mapCtx.fillStyle='#ffdf45';mapCtx.beginPath();mapCtx.arc(Math.max(8,Math.min(w-8,px)),Math.max(8,Math.min(h-8,pz)),8,0,Math.PI*2);mapCtx.fill();mapCtx.strokeStyle='#fff';mapCtx.lineWidth=2;mapCtx.stroke();}
+function drawMinimap(){const w=mapCanvas.width,h=mapCanvas.height;mapCtx.clearRect(0,0,w,h);mapCtx.fillStyle='#263b35';mapCtx.fillRect(0,0,w,h);mapCtx.strokeStyle='#9aa89a';mapCtx.lineWidth=9;for(let i=0;i<5;i++){mapCtx.beginPath();mapCtx.moveTo(i*65-20,0);mapCtx.lineTo(i*65+55,h);mapCtx.stroke();}mapCtx.strokeStyle='#ffb52e';mapCtx.lineWidth=4;mapCtx.beginPath();mapCtx.arc(w/2,h/2,91*(zone.radius/zone.startRadius),0,Math.PI*2);mapCtx.stroke();const px=w/2+player.position.x*1.1,pz=h/2+player.position.z*1.1;mapCtx.fillStyle='#ffdf45';mapCtx.beginPath();mapCtx.arc(Math.max(8,Math.min(w-8,px)),Math.max(8,Math.min(h-8,pz)),8,0,Math.PI*2);mapCtx.fill();mapCtx.strokeStyle='#fff';mapCtx.lineWidth=2;mapCtx.stroke();}
 
 function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,(now-last)/1000);last=now;
+ updateZone(dt);
  const heading=((cameraYaw*180/Math.PI)%360+360)%360;
  const compass=document.getElementById('compass-readout');
  if(compass)compass.textContent='NAVEGAÇÃO  '+String(Math.round(heading)).padStart(3,'0')+'°';
