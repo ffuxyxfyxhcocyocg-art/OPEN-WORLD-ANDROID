@@ -1,0 +1,16 @@
+{
+  "name": "open-world-br-realtime",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Realtime lobby and player synchronization server for Open World BR Mobile",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
