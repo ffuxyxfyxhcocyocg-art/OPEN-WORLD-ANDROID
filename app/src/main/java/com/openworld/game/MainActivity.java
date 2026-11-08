@@ -123,8 +123,10 @@ public class MainActivity extends Activity {
                 if (currentVersion.isEmpty()) {
                     currentVersion = version;
                 } else if (!currentVersion.equals(version)) {
+                    // Nunca substituir o HTML enquanto a partida está aberta.
+                    // A versão nova será baixada e aplicada somente ao abrir o app novamente.
                     currentVersion = version;
-                    loadRemoteGame();
+                    Toast.makeText(this, "Atualização disponível. Ela será aplicada quando você abrir o jogo novamente.", Toast.LENGTH_LONG).show();
                 }
             });
         }).start();
