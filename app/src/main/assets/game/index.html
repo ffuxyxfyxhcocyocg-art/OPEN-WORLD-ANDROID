@@ -348,16 +348,22 @@ function attachCharacter(model,animations=[],label='Personagem GLB'){
    model.traverse(o=>{
     if(!o.isBone)return;
     const n=(o.name||'').toLowerCase().replace(/[^a-z0-9_.]/g,'');
-    const left=/left|(^|[_\.])l($|[_\.])|^l[_\.]/.test(n);
-    const right=/right|(^|[_\.])r($|[_\.])|^r[_\.]/.test(n);
-    const side=left?1:right?-1:0;
+    // Identifica o lado pela posição real do osso no espaço do modelo.
+    o.updateWorldMatrix(true,false);
+    const boneWorld=new THREE.Vector3();o.getWorldPosition(boneWorld);
+    const side=Math.abs(boneWorld.x)>.015?(boneWorld.x>0?1:-1):0;
     let kind='';
     if(/upleg|upperleg|thigh|femur/.test(n))kind='thigh';
     else if(/lowerleg|calf|shin|knee/.test(n))kind='knee';
     else if(/upperarm|shoulder|arm/.test(n)&&!/forearm|lowerarm/.test(n))kind='arm';
     else if(/forearm|lowerarm/.test(n))kind='forearm';
     else if(/foot|ankle/.test(n))kind='foot';
-    if(kind&&side)proceduralBones.push({bone:o,base:o.quaternion.clone(),axis:new THREE.Vector3(1,0,0),kind,side});
+    if(kind&&side){
+     // Converte o eixo de balanço global para o eixo local de cada osso.
+     const worldQ=new THREE.Quaternion();o.getWorldQuaternion(worldQ);
+     const axis=new THREE.Vector3(1,0,0).applyQuaternion(worldQ.invert()).normalize();
+     proceduralBones.push({bone:o,base:o.quaternion.clone(),axis,kind,side});
+    }
    });
   }
   if(idleAction)idleAction.play();
