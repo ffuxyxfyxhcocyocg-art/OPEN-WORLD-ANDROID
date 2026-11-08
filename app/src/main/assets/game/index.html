@@ -33,6 +33,9 @@
 #ammo{position:absolute;right:17px;bottom:109px;background:#101820cc;border:1px solid #ffffff55;border-radius:8px;padding:6px 9px;font-size:12px}
 #combat-toast{position:absolute;top:145px;left:50%;transform:translateX(-50%);background:#101820cc;border:1px solid #ffffff55;border-radius:9px;padding:7px 10px;font-size:11px;opacity:0;transition:opacity .15s}
 @media(max-width:430px){#minimap-wrap{width:94px;height:94px}#weapon-slots{top:116px;right:8px}.weapon-slot{width:50px;height:39px}#fire{width:72px;height:72px}#combat-actions{right:10px;bottom:14px}}
+
+/* Ajustes para não sobrepor os controles antigos */
+#top{display:none}#jump{right:105px;bottom:24px;z-index:6}#vehicle{left:50%;right:auto;bottom:18px;transform:translateX(-50%);z-index:6}#combat-actions{z-index:7}#weapon-slots{z-index:7}
 </style>
 </head>
 <body><div id="game"></div><div id="top">OPEN WORLD • ANDROID</div><div id="status">Carregando mundo 3D...</div><button id="live-update" onclick="location.reload()">ATUALIZAÇÃO DISPONÍVEL • TOQUE PARA APLICAR</button>
