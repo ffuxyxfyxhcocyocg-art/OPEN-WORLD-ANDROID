@@ -120,6 +120,9 @@ const sky=new THREE.Mesh(new THREE.SphereGeometry(490,32,20),new THREE.MeshBasic
 const ocean=new THREE.Mesh(new THREE.PlaneGeometry(1200,1200),new THREE.MeshStandardMaterial({color:0x0756a8,roughness:.32,metalness:.12}));ocean.rotation.x=-Math.PI/2;ocean.position.y=-2.25;scene.add(ocean);
 const sand=new THREE.Mesh(new THREE.RingGeometry(176,194,192),new THREE.MeshStandardMaterial({color:0xe6d19a,roughness:1,side:THREE.DoubleSide}));sand.rotation.x=-Math.PI/2;sand.position.y=-.13;scene.add(sand);
 const island=new THREE.Mesh(new THREE.CircleGeometry(180,192),new THREE.MeshStandardMaterial({color:0xffffff,map:grassTexture,roughness:1}));island.rotation.set(-Math.PI/2,0,0);island.position.y=-.08;island.receiveShadow=true;scene.add(island);
+// Piso de segurança sob a área inicial: mantém o terreno visível mesmo se a textura da ilha falhar.
+const fallbackGround=new THREE.Mesh(new THREE.PlaneGeometry(420,420),new THREE.MeshStandardMaterial({color:0x587b45,roughness:1}));fallbackGround.rotation.x=-Math.PI/2;fallbackGround.position.y=-.16;fallbackGround.receiveShadow=true;scene.add(fallbackGround);
+const startPad=new THREE.Mesh(new THREE.CircleGeometry(13,48),new THREE.MeshStandardMaterial({color:0x718b50,roughness:1}));startPad.rotation.x=-Math.PI/2;startPad.position.set(0,-.12,3);scene.add(startPad);
 const cliffMat=mat(0x77716a);
 for(let n=0;n<128;n++){const a=n/128*Math.PI*2,r=184+Math.sin(n*2.31)*3.4;const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(2.7+(n%4)*.45,0),cliffMat);rock.position.set(Math.cos(a)*r,-.7+(n%3)*.15,Math.sin(a)*r);rock.scale.set(1.35,.9,1.1);rock.rotation.y=a;scene.add(rock);}
 function block(x,z,w,d,h,color){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(color));m.position.set(x,h/2,z);m.castShadow=true;m.receiveShadow=true;scene.add(m);return m}
@@ -647,7 +650,7 @@ function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,(now-
  // O personagem acompanha player diretamente.
  const target=driving?car.position:player.position;const angle=driving?yaw:cameraYaw;
  const desired=new THREE.Vector3(target.x+Math.sin(angle)*14,8.2,target.z+Math.cos(angle)*14);
- camera.position.lerp(desired,.12);camera.lookAt(target.x,1.6,target.z);
+ camera.position.lerp(desired,.24);camera.lookAt(target.x,1.1,target.z);
  drawMinimap();renderer.render(scene,camera);
 }requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
