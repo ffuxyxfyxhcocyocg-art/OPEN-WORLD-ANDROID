@@ -36,10 +36,45 @@
 
 /* Ajustes para não sobrepor os controles antigos */
 #top{display:none}#jump{right:105px;bottom:24px;z-index:6}#vehicle{left:50%;right:auto;bottom:18px;transform:translateX(-50%);z-index:6}#combat-actions{z-index:7}#weapon-slots{z-index:7}
+
+/* HUD battle royale inspirada na referência enviada */
+#combat-hud{font-family:Arial,sans-serif;text-shadow:0 1px 3px #000}
+#minimap-wrap{top:7px;left:7px;width:164px;height:164px;border-radius:2px;border:2px solid #aaa;background:#26352c}
+#match-info{position:absolute;top:176px;left:7px;width:164px;background:#111b24cc;border:1px solid #ffffff55;font-size:13px;text-align:center}
+#match-info>div{display:flex;justify-content:space-around;align-items:center;padding:4px 2px;background:linear-gradient(90deg,#1789d1 0 50%,#c63d3d 50%)}
+#match-info b,#match-info span{font-weight:800}#match-info small{display:block;text-align:left;padding:5px 7px;font-size:10px;background:#15191dcc}
+#compass{position:absolute;top:5px;left:50%;transform:translateX(-50%);width:min(380px,48vw);height:38px;text-align:center;background:#1018208c;border-bottom:1px solid #ffffff55;font-size:12px}
+#compass-readout{display:block;font-weight:900;font-size:13px}#compass .compass-line{font-size:9px;letter-spacing:2px;white-space:nowrap;overflow:hidden}
+#zone-warning{position:absolute;top:52px;left:50%;transform:translateX(-50%);padding:5px 10px;background:#18212bbd;font-size:12px;white-space:nowrap}
+#vitals{top:auto;bottom:5px;left:50%;transform:translateX(-50%);width:min(420px,48vw);padding:3px 7px;border:0;border-radius:0;background:#111a22a8}
+#vitals>div{display:inline-block;width:100%;font-size:9px!important}
+.bar{height:7px;margin:1px 0 3px;border-radius:0;background:#222}
+#health-fill{background:#e7c52c}#shield-fill{background:#55bd50}
+#weapon-slots{top:auto;right:auto;left:50%;bottom:31px;transform:translateX(-50%);flex-direction:row;gap:3px}
+.weapon-slot{width:92px;height:53px;border-radius:2px;background:#111a22e8;font-size:10px}
+#ammo{right:auto;left:50%;transform:translateX(-50%);bottom:87px;border-radius:2px;background:#101820dd}
+#combat-actions{right:12px;bottom:105px;flex-direction:column-reverse;gap:9px}
+#fire{width:66px;height:66px;border-radius:50%;background:#252a2dcc;border:1px solid #ffffff99;font-size:11px}
+#reload{width:53px;height:53px;border-radius:50%;background:#252a2dcc;border:1px solid #ffffff99;font-size:9px}
+#stick{left:7.5%;bottom:7%;width:142px;height:142px;background:#171b20a8;border:2px solid #ffffff88}
+#nub{left:43px;top:43px;width:52px;height:52px;background:#ffffff99}
+#jump{right:22px;bottom:25px;width:58px;height:58px;border-radius:50%;background:#252a2dcc;border:1px solid #ffffff99;font-size:10px}
+#vehicle{right:98px;left:auto;bottom:34px;width:55px;height:55px;border-radius:50%;background:#252a2dcc;font-size:9px}
+#hint{display:none}
+@media(max-width:600px){
+ #minimap-wrap{width:132px;height:132px}#match-info{top:144px;width:132px}
+ #compass{width:52vw}#zone-warning{top:46px;font-size:10px}
+ #weapon-slots{bottom:29px}.weapon-slot{width:75px;height:47px}
+ #vitals{width:45vw}#stick{width:122px;height:122px}#nub{left:35px;top:35px}
+ #combat-actions{right:8px;bottom:93px}#fire{width:58px;height:58px}
+ #jump{width:52px;height:52px;right:14px;bottom:20px}
+ #vehicle{right:78px;bottom:25px;width:48px;height:48px}
+}
+
 </style>
 </head>
 <body><div id="game"></div><div id="top">OPEN WORLD • ANDROID</div><div id="status">Carregando mundo 3D...</div><button id="live-update" onclick="location.reload()">ATUALIZAÇÃO DISPONÍVEL • TOQUE PARA APLICAR</button>
-<div id="combat-hud"><div id="minimap-wrap"><canvas id="minimap" width="232" height="232"></canvas></div><div id="vitals"><div style="font-size:10px">VIDA <span id="health-num">100</span></div><div class="bar"><i id="health-fill"></i></div><div style="font-size:10px">ESCUDO <span id="shield-num">100</span></div><div class="bar"><i id="shield-fill"></i></div></div><div id="weapon-slots"><button class="weapon-slot active" data-slot="0">1 • AR</button><button class="weapon-slot" data-slot="1">2 • PIST</button><button class="weapon-slot" data-slot="2">3 • GRAN</button></div><div id="ammo">30 / 120</div><div id="combat-actions"><button id="reload">RECARREGAR</button><button id="fire">ATIRAR</button></div><div id="combat-toast">ARMA SELECIONADA</div></div>\n<div id="controls"><div id="look" aria-label="Arraste para girar a câmera"></div><div id="stick"><div id="nub"></div></div><div id="hint">ESQUERDA: MOVER • DIREITA: GIRAR CÂMERA</div><button class="btn" id="jump">PULAR</button><button class="btn" id="vehicle">ENTRAR</button></div>
+<div id="combat-hud"><div id="match-info"><div><b>ALIVE</b> <strong>1</strong> <span>KILLED</span> <strong>0</strong></div><small>● AUTOSHOOTING</small></div><div id="compass"><span id="compass-readout">N 000°</span><div class="compass-line">W　NW　N　NE　E　SE　S　SW</div></div><div id="zone-warning">⚠ A ZONA SEGURA VAI DIMINUIR</div><div id="minimap-wrap"><canvas id="minimap" width="232" height="232"></canvas></div><div id="vitals"><div style="font-size:10px">VIDA <span id="health-num">100</span></div><div class="bar"><i id="health-fill"></i></div><div style="font-size:10px">ESCUDO <span id="shield-num">100</span></div><div class="bar"><i id="shield-fill"></i></div></div><div id="weapon-slots"><button class="weapon-slot active" data-slot="0">1 • AR</button><button class="weapon-slot" data-slot="1">2 • PIST</button><button class="weapon-slot" data-slot="2">3 • GRAN</button></div><div id="ammo">30 / 120</div><div id="combat-actions"><button id="reload">RECARREGAR</button><button id="fire">ATIRAR</button></div><div id="combat-toast">ARMA SELECIONADA</div></div>\n<div id="controls"><div id="look" aria-label="Arraste para girar a câmera"></div><div id="stick"><div id="nub"></div></div><div id="hint">ESQUERDA: MOVER • DIREITA: GIRAR CÂMERA</div><button class="btn" id="jump">PULAR</button><button class="btn" id="vehicle">ENTRAR</button></div>
 <!-- Compatibilidade com cópias antigas do script que ainda consultam spots. -->
 <script>var spots = [];</script>
 <script type="importmap">
@@ -469,6 +504,9 @@ const mapCanvas=document.querySelector('#minimap'),mapCtx=mapCanvas.getContext('
 function drawMinimap(){const w=mapCanvas.width,h=mapCanvas.height;mapCtx.clearRect(0,0,w,h);mapCtx.fillStyle='#263b35';mapCtx.fillRect(0,0,w,h);mapCtx.strokeStyle='#9aa89a';mapCtx.lineWidth=9;for(let i=0;i<5;i++){mapCtx.beginPath();mapCtx.moveTo(i*65-20,0);mapCtx.lineTo(i*65+55,h);mapCtx.stroke();}mapCtx.strokeStyle='#e8f0ff';mapCtx.lineWidth=3;mapCtx.beginPath();mapCtx.arc(w/2,h/2,91,0,Math.PI*2);mapCtx.stroke();const px=w/2+player.position.x*1.1,pz=h/2+player.position.z*1.1;mapCtx.fillStyle='#ffdf45';mapCtx.beginPath();mapCtx.arc(Math.max(8,Math.min(w-8,px)),Math.max(8,Math.min(h-8,pz)),8,0,Math.PI*2);mapCtx.fill();mapCtx.strokeStyle='#fff';mapCtx.lineWidth=2;mapCtx.stroke();}
 
 function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,(now-last)/1000);last=now;
+ const heading=((cameraYaw*180/Math.PI)%360+360)%360;
+ const compass=document.getElementById('compass-readout');
+ if(compass)compass.textContent='NAVEGAÇÃO  '+String(Math.round(heading)).padStart(3,'0')+'°';
  if(driving){if(Math.abs(move.y)>.03){yaw+=move.x*dt*1.7*Math.sign(move.y);speed=THREE.MathUtils.damp(speed,move.y*13,2.5,dt)}else speed=THREE.MathUtils.damp(speed,0,2,dt);car.rotation.y=yaw;moveWithCollision(car,-Math.sin(yaw)*speed*dt,-Math.cos(yaw)*speed*dt,1.45)}
  else{const forward=camera.getWorldDirection(new THREE.Vector3());forward.y=0;forward.normalize();const right=new THREE.Vector3(-forward.z,0,forward.x);const direction=right.multiplyScalar(move.x).add(forward.multiplyScalar(move.y));if(direction.lengthSq()>.0001){direction.normalize();moveWithCollision(player,direction.x*5*dt,direction.z*5*dt,.48);player.rotation.y=Math.atan2(direction.x,direction.z)}}
  updateCharacterAnimation(!driving&&Math.hypot(move.x,move.y)>.1);
