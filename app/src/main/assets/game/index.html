@@ -71,10 +71,13 @@
  #vehicle{right:78px;bottom:25px;width:48px;height:48px}
 }
 
+
+#match-info #phase-state,#match-info #phase-clock{display:block;text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.3px;background:#111923e8;border-top:1px solid #ffffff22}
+#match-info #phase-clock{color:#ffd45b;font-size:11px}
 </style>
 </head>
 <body><div id="game"></div><div id="top">OPEN WORLD • ANDROID</div><div id="status">Carregando mundo 3D...</div>
-<div id="combat-hud"><div id="match-info"><div><b>ALIVE</b> <strong>1</strong> <span>KILLED</span> <strong>0</strong></div><small>● AUTOSHOOTING</small></div><div id="compass"><span id="compass-readout">N 000°</span><div class="compass-line">W　NW　N　NE　E　SE　S　SW</div></div><div id="zone-warning">⚠ A ZONA SEGURA VAI DIMINUIR</div><div id="minimap-wrap"><canvas id="minimap" width="232" height="232"></canvas></div><div id="vitals"><div style="font-size:10px">VIDA <span id="health-num">100</span></div><div class="bar"><i id="health-fill"></i></div><div style="font-size:10px">ESCUDO <span id="shield-num">100</span></div><div class="bar"><i id="shield-fill"></i></div></div><div id="weapon-slots"><button class="weapon-slot active" data-slot="0">1 • AR</button><button class="weapon-slot" data-slot="1">2 • PIST</button><button class="weapon-slot" data-slot="2">3 • GRAN</button></div><div id="ammo">30 / 120</div><div id="combat-actions"><button id="reload">RECARREGAR</button><button id="fire">ATIRAR</button></div><div id="combat-toast">ARMA SELECIONADA</div></div>\n<div id="controls"><div id="look" aria-label="Arraste para girar a câmera"></div><div id="stick"><div id="nub"></div></div><div id="hint">ESQUERDA: MOVER • DIREITA: GIRAR CÂMERA</div><button class="btn" id="jump">PULAR</button><button class="btn" id="vehicle">ENTRAR</button></div>
+<div id="combat-hud"><div id="match-info"><div><b>ALIVE</b> <strong>1</strong> <span>KILLED</span> <strong>0</strong></div><small id="phase-state">● LOBBY • AGUARDANDO PARTIDA</small><small id="phase-clock">PARTIDA COMEÇA EM 00:12</small></div><div id="compass"><span id="compass-readout">N 000°</span><div class="compass-line">W　NW　N　NE　E　SE　S　SW</div></div><div id="zone-warning">⚠ A ZONA SEGURA VAI DIMINUIR</div><div id="minimap-wrap"><canvas id="minimap" width="232" height="232"></canvas></div><div id="vitals"><div style="font-size:10px">VIDA <span id="health-num">100</span></div><div class="bar"><i id="health-fill"></i></div><div style="font-size:10px">ESCUDO <span id="shield-num">100</span></div><div class="bar"><i id="shield-fill"></i></div></div><div id="weapon-slots"><button class="weapon-slot active" data-slot="0">1 • AR</button><button class="weapon-slot" data-slot="1">2 • PIST</button><button class="weapon-slot" data-slot="2">3 • GRAN</button></div><div id="ammo">30 / 120</div><div id="combat-actions"><button id="reload">RECARREGAR</button><button id="fire">ATIRAR</button></div><div id="combat-toast">ARMA SELECIONADA</div></div>\n<div id="controls"><div id="look" aria-label="Arraste para girar a câmera"></div><div id="stick"><div id="nub"></div></div><div id="hint">ESQUERDA: MOVER • DIREITA: GIRAR CÂMERA</div><button class="btn" id="jump">PULAR</button><button class="btn" id="vehicle">ENTRAR</button></div>
 <!-- Compatibilidade com cópias antigas do script que ainda consultam spots. -->
 <script>var spots = [];</script>
 <script type="importmap">
@@ -501,6 +504,34 @@ document.querySelectorAll('.weapon-slot').forEach(b=>b.addEventListener('click',
 document.querySelector('#fire').addEventListener('click',()=>{if(driving){combatToast('SAIA DO VEÍCULO PARA USAR');return;}if(combat.reloading)return;if(combat.ammo[combat.slot]<=0){combatToast('SEM MUNIÇÃO • RECARREGUE');return;}combat.ammo[combat.slot]--;refreshCombat();combatToast('DISPARO');});
 document.querySelector('#reload').addEventListener('click',()=>{if(combat.reloading||combat.slot===2)return;if(combat.ammo[combat.slot]>=([30,12][combat.slot])||combat.reserve[combat.slot]<=0){combatToast('NÃO PRECISA RECARREGAR');return;}combat.reloading=true;combatToast('RECARREGANDO...');setTimeout(()=>{const cap=[30,12][combat.slot],need=cap-combat.ammo[combat.slot],take=Math.min(need,combat.reserve[combat.slot]);combat.ammo[combat.slot]+=take;combat.reserve[combat.slot]-=take;combat.reloading=false;refreshCombat();combatToast('RECARREGADO');},1250);});
 
+
+/* Fases locais inspiradas no TABGCppServer. Multiplayer online ainda requer servidor conectado. */
+const match={state:"waiting",elapsed:0,waiting:12,flying:5,players:[{id:"local-player",team:1,connected:true}]};
+const phaseState=document.querySelector("#phase-state");
+const phaseClock=document.querySelector("#phase-clock");
+function updateMatchPhase(dt){
+ match.elapsed+=dt;
+ let remaining=0;
+ if(match.state==="waiting"){
+  remaining=Math.max(0,match.waiting-match.elapsed);
+  phaseState.textContent="● LOBBY • "+match.players.filter(p=>p.connected).length+"/40 JOGADOR";
+  phaseClock.textContent="PARTIDA COMEÇA EM 00:"+String(Math.ceil(remaining)).padStart(2,"0");
+  if(remaining<=0){match.state="countdown";match.elapsed=0;combatToast("PREPARE-SE PARA A PARTIDA");}
+ }else if(match.state==="countdown"){
+  remaining=Math.max(0,match.flying-match.elapsed);
+  phaseState.textContent="● CONTAGEM REGRESSIVA";
+  phaseClock.textContent="INICIANDO EM 00:"+String(Math.ceil(remaining)).padStart(2,"0");
+  if(remaining<=0){match.state="started";match.elapsed=0;zone.elapsed=0;zone.damageClock=0;combatToast("PARTIDA INICIADA");}
+ }else if(match.state==="started"){
+  phaseState.textContent="● PARTIDA EM ANDAMENTO";
+  phaseClock.textContent="SOBREVIVA • ZONA ATIVA";
+  if(combat.health<=0){match.state="ended";match.elapsed=0;}
+ }else{
+  phaseState.textContent="● PARTIDA ENCERRADA";
+  phaseClock.textContent="FIM DE JOGO • REINICIE PARA JOGAR";
+ }
+}
+
 /* Zona segura funcional: espera, fechamento gradual e dano fora do círculo. */
 const zone={startRadius:150,endRadius:24,wait:15,shrink:90,elapsed:0,radius:150,damageClock:0};
 const zoneRing=new THREE.Mesh(
@@ -510,6 +541,7 @@ const zoneRing=new THREE.Mesh(
 zoneRing.rotation.x=Math.PI/2;zoneRing.position.set(0,.42,0);zoneRing.renderOrder=4;scene.add(zoneRing);
 const zoneWarning=document.querySelector('#zone-warning');
 function updateZone(dt){
+ if(match.state!=="started")return;
  zone.elapsed+=dt;
  const closing=Math.max(0,zone.elapsed-zone.wait);
  const progress=THREE.MathUtils.clamp(closing/zone.shrink,0,1);
@@ -530,6 +562,7 @@ const mapCanvas=document.querySelector('#minimap'),mapCtx=mapCanvas.getContext('
 function drawMinimap(){const w=mapCanvas.width,h=mapCanvas.height;mapCtx.clearRect(0,0,w,h);mapCtx.fillStyle='#263b35';mapCtx.fillRect(0,0,w,h);mapCtx.strokeStyle='#9aa89a';mapCtx.lineWidth=9;for(let i=0;i<5;i++){mapCtx.beginPath();mapCtx.moveTo(i*65-20,0);mapCtx.lineTo(i*65+55,h);mapCtx.stroke();}mapCtx.strokeStyle='#ffb52e';mapCtx.lineWidth=4;mapCtx.beginPath();mapCtx.arc(w/2,h/2,91*(zone.radius/zone.startRadius),0,Math.PI*2);mapCtx.stroke();const px=w/2+player.position.x*1.1,pz=h/2+player.position.z*1.1;mapCtx.fillStyle='#ffdf45';mapCtx.beginPath();mapCtx.arc(Math.max(8,Math.min(w-8,px)),Math.max(8,Math.min(h-8,pz)),8,0,Math.PI*2);mapCtx.fill();mapCtx.strokeStyle='#fff';mapCtx.lineWidth=2;mapCtx.stroke();}
 
 function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,(now-last)/1000);last=now;
+ updateMatchPhase(dt);
  updateZone(dt);
  const heading=((cameraYaw*180/Math.PI)%360+360)%360;
  const compass=document.getElementById('compass-readout');
