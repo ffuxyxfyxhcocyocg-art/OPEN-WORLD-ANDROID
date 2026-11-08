@@ -509,7 +509,70 @@ document.querySelector('#reload').addEventListener('click',()=>{if(combat.reload
 const match={state:"waiting",elapsed:0,waiting:12,flying:5,players:[{id:"local-player",team:1,connected:true}]};
 const phaseState=document.querySelector("#phase-state");
 const phaseClock=document.querySelector("#phase-clock");
+
+const networkLine=document.createElement("small");
+networkLine.id="network-state";
+networkLine.textContent="● OFFLINE • SERVIDOR NÃO CONFIGURADO";
+networkLine.style.cssText="display:block;text-align:center;padding:4px;background:#111923e8;border-top:1px solid #ffffff22;font-size:9px;color:#ffd45b";
+document.querySelector("#match-info").appendChild(networkLine);
+const remotePlayers=new Map();
+let networkSocket=null,networkSnapshot=null,networkSendClock=0,networkPlayerId=null;
+const serverFromUrl=new URLSearchParams(location.search).get("server");
+const networkUrl=window.OPEN_WORLD_SERVER_URL||serverFromUrl||"";
+function connectOnline(){
+ if(!networkUrl){networkLine.textContent="● OFFLINE • AGUARDANDO HOSPEDAGEM";return;}
+ try{
+  networkLine.textContent="● CONECTANDO AO SERVIDOR...";
+  networkSocket=new WebSocket(networkUrl);
+  networkSocket.addEventListener("open",()=>{networkLine.textContent="● ONLINE • CONECTADO";networkSocket.send(JSON.stringify({type:"join",name:"Jogador"}));});
+  networkSocket.addEventListener("message",event=>{
+   let data;try{data=JSON.parse(event.data)}catch{return}
+   if(data.type==="welcome"){networkPlayerId=data.id;return}
+   if(data.type==="full"){networkLine.textContent="● SALA CHEIA";return}
+   if(data.type!=="snapshot")return;
+   networkSnapshot=data;
+   match.players=Array.from({length:data.playerCount||1},(_,i)=>({id:String(i),connected:true}));
+   networkLine.textContent="● ONLINE • "+data.playerCount+"/"+data.maxPlayers+" JOGADORES";
+   const alive=new Set();
+   for(const p of data.players||[]){
+    if(p.id===networkPlayerId)continue;
+    alive.add(p.id);
+    let avatar=remotePlayers.get(p.id);
+    if(!avatar){
+     avatar=new THREE.Group();
+     const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.34,.85,3,7),new THREE.MeshStandardMaterial({color:0x35a9ff,roughness:.8}));
+     torso.position.y=1;avatar.add(torso);
+     const head=new THREE.Mesh(new THREE.SphereGeometry(.22,10,8),new THREE.MeshStandardMaterial({color:0xc99570}));
+     head.position.y=1.68;avatar.add(head);scene.add(avatar);remotePlayers.set(p.id,avatar);
+    }
+    avatar.position.set(p.x||0,0,p.z||0);avatar.rotation.y=p.yaw||0;
+   }
+   for(const [id,avatar] of remotePlayers)if(!alive.has(id)){scene.remove(avatar);remotePlayers.delete(id);}
+  });
+  networkSocket.addEventListener("close",()=>{networkLine.textContent="● DESCONECTADO • TENTANDO NOVAMENTE";networkSnapshot=null;setTimeout(connectOnline,4000);});
+  networkSocket.addEventListener("error",()=>{networkLine.textContent="● FALHA NA CONEXÃO";});
+ }catch(e){networkLine.textContent="● URL DO SERVIDOR INVÁLIDA";}
+}
+connectOnline();
+function updateNetwork(dt){
+ if(!networkSocket||networkSocket.readyState!==WebSocket.OPEN)return;
+ networkSendClock+=dt;
+ if(networkSendClock<.1)return;
+ networkSendClock=0;
+ const p=driving?car.position:player.position;
+ networkSocket.send(JSON.stringify({type:"state",x:p.x,z:p.z,yaw:driving?yaw:player.rotation.y,vehicle:!!driving}));
+}
+
 function updateMatchPhase(dt){
+ if(networkSnapshot){
+  match.state=networkSnapshot.phase;
+  match.elapsed=networkSnapshot.matchElapsed||0;
+  let remaining=Math.ceil(networkSnapshot.phaseRemaining||0);
+  if(match.state==="waiting"){phaseState.textContent="● LOBBY • "+networkSnapshot.playerCount+"/40 JOGADORES";phaseClock.textContent="PARTIDA COMEÇA EM 00:"+String(remaining).padStart(2,"0");}
+  else if(match.state==="countdown"){phaseState.textContent="● CONTAGEM REGRESSIVA";phaseClock.textContent="INICIANDO EM 00:"+String(remaining).padStart(2,"0");}
+  else{phaseState.textContent="● PARTIDA EM ANDAMENTO";phaseClock.textContent="JOGADORES ONLINE: "+networkSnapshot.playerCount;}
+  return;
+ }
  match.elapsed+=dt;
  let remaining=0;
  if(match.state==="waiting"){
@@ -541,8 +604,15 @@ const zoneRing=new THREE.Mesh(
 zoneRing.rotation.x=Math.PI/2;zoneRing.position.set(0,.42,0);zoneRing.renderOrder=4;scene.add(zoneRing);
 const zoneWarning=document.querySelector('#zone-warning');
 function updateZone(dt){
- if(match.state!=="started")return;
- zone.elapsed+=dt;
+ if(networkSnapshot){
+  if(networkSnapshot.phase!=="started")return;
+  zone.elapsed=networkSnapshot.zoneElapsed||0;
+  zone.radius=networkSnapshot.zoneRadius||zone.startRadius;
+ }else{
+  if(match.state!=="started")return;
+  zone.elapsed+=dt;
+ }
+
  const closing=Math.max(0,zone.elapsed-zone.wait);
  const progress=THREE.MathUtils.clamp(closing/zone.shrink,0,1);
  zone.radius=THREE.MathUtils.lerp(zone.startRadius,zone.endRadius,progress);
@@ -569,6 +639,7 @@ function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,(now-
  if(compass)compass.textContent='NAVEGAÇÃO  '+String(Math.round(heading)).padStart(3,'0')+'°';
  if(driving){if(Math.abs(move.y)>.03){yaw+=move.x*dt*1.7*Math.sign(move.y);speed=THREE.MathUtils.damp(speed,move.y*13,2.5,dt)}else speed=THREE.MathUtils.damp(speed,0,2,dt);car.rotation.y=yaw;moveWithCollision(car,-Math.sin(yaw)*speed*dt,-Math.cos(yaw)*speed*dt,1.45)}
  else{const forward=camera.getWorldDirection(new THREE.Vector3());forward.y=0;forward.normalize();const right=new THREE.Vector3(-forward.z,0,forward.x);const direction=right.multiplyScalar(move.x).add(forward.multiplyScalar(move.y));if(direction.lengthSq()>.0001){direction.normalize();moveWithCollision(player,direction.x*5*dt,direction.z*5*dt,.48);player.rotation.y=Math.atan2(direction.x,direction.z)}}
+ updateNetwork(dt);
  updateCharacterAnimation(!driving&&Math.hypot(move.x,move.y)>.1);
  if(characterMixer)characterMixer.update(dt);
  if(characterReady&&!runAction)updateProceduralWalk(dt,!driving&&Math.hypot(move.x,move.y)>.1);
