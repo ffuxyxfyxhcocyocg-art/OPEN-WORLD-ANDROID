@@ -68,7 +68,7 @@ jobs:
       - name: Export Android APK
         run: |
           mkdir -p godot/build
-          GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android/debug.keystore" GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey" GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android" /tmp/godot-bin/Godot_v4.4.1-stable_linux.x86_64 --headless --verbose --path godot --export-debug "Android" godot/build/OpenWorldBR-debug.apk
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android/debug.keystore" GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey" GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android" /tmp/godot-bin/Godot_v4.4.1-stable_linux.x86_64 --headless --verbose --path godot --export-debug "Android" build/OpenWorldBR-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
