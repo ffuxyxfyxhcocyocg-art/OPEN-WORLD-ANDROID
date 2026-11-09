@@ -6,6 +6,7 @@ const CURRENT_VERSION := "0.1.0"
 const UPDATE_INFO_URL := "https://raw.githubusercontent.com/ffuxyxfyxhcocyocg-art/OPEN-WORLD-ANDROID/godot-native/update_info.json"
 
 var player: CharacterBody3D
+var hud_layer: CanvasLayer
 var update_request: HTTPRequest
 var update_button: Button
 var update_status: Label
@@ -74,8 +75,8 @@ func _build_player() -> void:
 	add_child(player)
 
 func _build_hud() -> void:
-	var layer := CanvasLayer.new()
-	add_child(layer)
+	hud_layer = CanvasLayer.new()
+	add_child(hud_layer)
 	var joystick := Control.new()
 	joystick.set_script(JoystickScript)
 	joystick.anchor_left = 0.03
@@ -84,14 +85,14 @@ func _build_hud() -> void:
 	joystick.offset_top = -180
 	joystick.offset_bottom = -20
 	joystick.offset_right = 180
-	layer.add_child(joystick)
+	hud_layer.add_child(joystick)
 	joystick.direction_changed.connect(player.set_mobile_direction)
 
 	var jump_button := _make_button("PULAR", Vector2(-150, -105))
-	layer.add_child(jump_button)
+	hud_layer.add_child(jump_button)
 	jump_button.pressed.connect(player.jump)
 	var run_button := _make_button("CORRER", Vector2(-150, -45))
-	layer.add_child(run_button)
+	hud_layer.add_child(run_button)
 	run_button.toggle_mode = true
 	run_button.toggled.connect(player.set_running)
 
@@ -116,7 +117,7 @@ func _setup_updater() -> void:
 	update_status.add_theme_color_override("font_shadow_color", Color.BLACK)
 	update_status.add_theme_constant_override("shadow_offset_x", 2)
 	update_status.add_theme_constant_override("shadow_offset_y", 2)
-	get_node("..").add_child.call_deferred(update_status) if false else add_child(update_status)
+	hud_layer.add_child(update_status)
 
 	update_button = Button.new()
 	update_button.text = "VERIFICAR ATUALIZAÇÃO"
@@ -129,7 +130,7 @@ func _setup_updater() -> void:
 	update_button.offset_top = 48
 	update_button.offset_right = 270
 	update_button.offset_bottom = 94
-	add_child(update_button)
+	hud_layer.add_child(update_button)
 	update_button.pressed.connect(_on_update_button_pressed)
 
 func _check_for_updates() -> void:
