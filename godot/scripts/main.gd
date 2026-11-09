@@ -3,8 +3,8 @@ extends Node3D
 const PlayerScript = preload("res://scripts/player.gd")
 const JoystickScript = preload("res://scripts/mobile_joystick.gd")
 const BattleRoyaleScript = preload("res://scripts/battle_royale.gd")
-const CURRENT_VERSION := "0.2.0-br"
-const UPDATE_INFO_URL := "https://raw.githubusercontent.com/ffuxyxfyxhcocyocg-art/OPEN-WORLD-ANDROID/godot-native/update_info.json"
+const CURRENT_VERSION := "0.2.0"
+const UPDATE_INFO_URL := "https://raw.githubusercontent.com/ffuxyxfyxhcocyocg-art/OPEN-WORLD-ANDROID/sr-battleroyale-godot/update_info.json"
 
 var player: CharacterBody3D
 var hud_layer: CanvasLayer
@@ -17,9 +17,8 @@ func _ready() -> void:
 	_build_world()
 	_build_player()
 	_build_hud()
-	var battle := Node3D.new()
+	var battle = BattleRoyaleScript.new()
 	battle.name = "SRBattleRoyale"
-	battle.set_script(BattleRoyaleScript)
 	battle.setup(player)
 	add_child(battle)
 	_setup_updater()
