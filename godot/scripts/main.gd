@@ -3,7 +3,10 @@ extends Node3D
 const PlayerScript = preload("res://scripts/player.gd")
 const JoystickScript = preload("res://scripts/mobile_joystick.gd")
 const BattleRoyaleScript = preload("res://scripts/battle_royale.gd")
-const CURRENT_VERSION := "0.2.0"
+const ArenaWorldScript = preload("res://scripts/arena_world.gd")
+const ArcadeCombatScript = preload("res://scripts/arcade_combat.gd")
+const LANNetworkScript = preload("res://scripts/lan_multiplayer.gd")
+const CURRENT_VERSION := "0.3.0"
 const UPDATE_INFO_URL := "https://raw.githubusercontent.com/ffuxyxfyxhcocyocg-art/OPEN-WORLD-ANDROID/sr-battleroyale-godot/update_info.json"
 
 var player: CharacterBody3D
@@ -21,38 +24,26 @@ func _ready() -> void:
 	battle.name = "SRBattleRoyale"
 	battle.setup(player)
 	add_child(battle)
+	var network = LANNetworkScript.new()
+	network.name = "LANMultiplayer"
+	network.setup(player, battle)
+	add_child(network)
+	var combat = ArcadeCombatScript.new()
+	combat.name = "ArcadeCombat"
+	combat.setup(player, battle, network)
+	add_child(combat)
 	_setup_updater()
 	_check_for_updates()
 
 func _build_world() -> void:
-	var env := WorldEnvironment.new()
-	var environment := Environment.new()
-	environment.background_mode = Environment.BG_SKY
-	environment.sky = Sky.new()
-	environment.sky.sky_material = ProceduralSkyMaterial.new()
-	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color(0.72, 0.79, 0.9)
-	environment.ambient_light_energy = 0.65
-	env.environment = environment
-	add_child(env)
-
+	var arena = ArenaWorldScript.new()
+	arena.name = "IslandArena3D"
+	add_child(arena)
 	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-52, -28, 0)
-	sun.light_energy = 1.1
+	sun.rotation_degrees = Vector3(-53, -35, 0)
+	sun.light_energy = 1.25
+	sun.shadow_enabled = false
 	add_child(sun)
-
-	_add_box(Vector3(0, -0.5, 0), Vector3(260, 1, 260), Color(0.24, 0.43, 0.25), true)
-	for i in range(-2, 3):
-		_add_box(Vector3(i * 36.0, 0.015, 0), Vector3(9, 0.04, 250), Color(0.12, 0.13, 0.15), false)
-		_add_box(Vector3(0, 0.02, i * 36.0), Vector3(250, 0.04, 9), Color(0.12, 0.13, 0.15), false)
-	for x in range(-2, 3):
-		for z in range(-2, 3):
-			if x == 0 and z == 0:
-				continue
-			var h := 8.0 + float(abs(x * 7 + z * 11) % 5) * 2.2
-			var w := 13.0 + float((x + z + 8) % 3) * 2.0
-			var color := Color(0.48 + 0.04 * float(abs(x) % 3), 0.5, 0.55, 1)
-			_add_box(Vector3(x * 36.0 + 18.0, h * 0.5, z * 36.0 + 18.0), Vector3(w, h, w), color, true)
 
 func _add_box(pos: Vector3, dimensions: Vector3, color: Color, solid: bool) -> void:
 	var body := StaticBody3D.new() if solid else Node3D.new()
