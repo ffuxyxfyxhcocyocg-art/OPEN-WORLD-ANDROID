@@ -83,6 +83,15 @@ jobs:
             exit 1
           fi
 
+      - name: Verify scene content, multiplayer and Midas import
+        run: |
+          set -o pipefail
+          /tmp/godot-bin/Godot_v4.4.1-stable_linux.x86_64 --headless --path godot --script res://scripts/verify_scene.gd 2>&1 | tee /tmp/sr-scene-verify.log
+          if ! grep -q "SMOKE PASS" /tmp/sr-scene-verify.log; then
+            echo "Native scene verification did not pass."
+            exit 1
+          fi
+
       - name: Export Android APK
         run: |
           mkdir -p godot/build
