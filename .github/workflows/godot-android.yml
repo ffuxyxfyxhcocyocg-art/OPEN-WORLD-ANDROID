@@ -1,0 +1,59 @@
+name: Godot Android APK
+
+on:
+  push:
+    branches: [godot-native]
+    paths:
+      - "godot/**"
+      - ".github/workflows/godot-android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform tools
+        run: |
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Download Godot 4.4.1 and Android export templates
+        run: |
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.4.1.stable"
+          wget -q https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip -O /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot-bin
+          chmod +x /tmp/godot-bin/Godot_v4.4.1-stable_linux.x86_64
+          wget -q https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz -O /tmp/templates.tpz
+          mkdir -p /tmp/godot-templates
+          unzip -q /tmp/templates.tpz -d /tmp/godot-templates
+          cp -R /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/4.4.1.stable/"
+
+      - name: Validate project and import assets
+        run: |
+          /tmp/godot-bin/Godot_v4.4.1-stable_linux.x86_64 --headless --path godot --editor --quit
+
+      - name: Export Android APK
+        run: |
+          mkdir -p godot/build
+          /tmp/godot-bin/Godot_v4.4.1-stable_linux.x86_64 --headless --path godot --export-debug "Android" godot/build/OpenWorldBR-debug.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenWorldBR-Godot-Android
+          path: godot/build/OpenWorldBR-debug.apk
+          if-no-files-found: error
