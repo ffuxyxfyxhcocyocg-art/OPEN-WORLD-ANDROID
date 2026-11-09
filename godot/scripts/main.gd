@@ -2,7 +2,7 @@ extends Node3D
 
 const PlayerScript = preload("res://scripts/player.gd")
 const JoystickScript = preload("res://scripts/mobile_joystick.gd")
-const CURRENT_VERSION := "0.1.0"
+const CURRENT_VERSION := "0.1.1"
 const UPDATE_INFO_URL := "https://raw.githubusercontent.com/ffuxyxfyxhcocyocg-art/OPEN-WORLD-ANDROID/godot-native/update_info.json"
 
 var player: CharacterBody3D
