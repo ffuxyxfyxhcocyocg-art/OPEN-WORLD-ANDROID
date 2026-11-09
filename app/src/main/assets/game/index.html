@@ -74,6 +74,8 @@
 
 #match-info #phase-state,#match-info #phase-clock{display:block;text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.3px;background:#111923e8;border-top:1px solid #ffffff22}
 #match-info #phase-clock{color:#ffd45b;font-size:11px}
+#loot-indicator{position:fixed;top:35px;right:10px;z-index:9;pointer-events:none;background:#12302bdc;color:#bdf6d2;border:1px solid #85efb267;border-radius:8px;padding:7px 10px;font-size:11px;font-weight:800;letter-spacing:.5px;text-shadow:0 1px 2px #0005}
+@media(max-width:600px){#loot-indicator{top:27px;right:5px;font-size:9px;padding:5px 6px}}
 #build-tag{position:fixed;right:10px;top:8px;z-index:9;pointer-events:none;padding:6px 9px;background:#152b35aa;border:1px solid #ffffff33;border-radius:10px;color:#eef8fa;font-size:10px;font-weight:800;letter-spacing:.5px;text-shadow:0 1px 2px #0005}
 @media(max-width:600px){#build-tag{font-size:8px;right:5px;top:3px;padding:4px 6px}}
 /* HUD premium compacto e botões confortáveis no modo paisagem */
@@ -96,7 +98,7 @@
 @media(max-width:700px){#minimap-wrap{width:112px;height:112px}#match-info{top:123px;width:112px;font-size:11px}#compass{top:3px}#zone-warning{top:45px;font-size:9px}#weapon-slots{bottom:29px}.weapon-slot{width:60px;height:43px;font-size:9px}#vitals{width:42vw}#status{font-size:10px}}
 </style>
 </head>
-<body><div id="game"></div><div id="top">OPEN WORLD • ANDROID</div><div id="build-tag">OPEN WORLD BR · v43</div><div id="status">Carregando mundo 3D v42...</div>
+<body><div id="game"></div><div id="top">OPEN WORLD • ANDROID</div><div id="build-tag">OPEN WORLD BR · v44</div><div id="loot-indicator">SUPRIMENTOS · CARREGANDO</div><div id="status">Carregando mundo 3D v44...</div>
 <div id="combat-hud"><div id="match-info"><div><b>ALIVE</b> <strong>1</strong> <span>KILLED</span> <strong>0</strong></div><small id="phase-state">● LOBBY • AGUARDANDO PARTIDA</small><small id="phase-clock">PARTIDA COMEÇA EM 00:12</small></div><div id="compass"><span id="compass-readout">N 000°</span><div class="compass-line">W　NW　N　NE　E　SE　S　SW</div></div><div id="zone-warning">⚠ A ZONA SEGURA VAI DIMINUIR</div><div id="minimap-wrap"><canvas id="minimap" width="232" height="232"></canvas></div><div id="vitals"><div style="font-size:10px">VIDA <span id="health-num">100</span></div><div class="bar"><i id="health-fill"></i></div><div style="font-size:10px">ESCUDO <span id="shield-num">100</span></div><div class="bar"><i id="shield-fill"></i></div></div><div id="weapon-slots"><button class="weapon-slot active" data-slot="0">1 • AR</button><button class="weapon-slot" data-slot="1">2 • PIST</button><button class="weapon-slot" data-slot="2">3 • GRAN</button></div><div id="ammo">30 / 120</div><div id="combat-actions"><button id="reload">RECARREGAR</button><button id="fire">ATIRAR</button></div><div id="combat-toast">ARMA SELECIONADA</div></div>\n<div id="controls"><div id="look" aria-label="Arraste para girar a câmera"></div><div id="stick"><div id="nub"></div></div><div id="hint">ESQUERDA: MOVER • DIREITA: GIRAR CÂMERA</div><button class="btn" id="jump">PULAR</button><button class="btn" id="vehicle">ENTRAR</button></div>
 <!-- Compatibilidade com cópias antigas do script que ainda consultam spots. -->
 <script>var spots = [];</script>
@@ -577,11 +579,13 @@ document.querySelector('#reload').addEventListener('click',()=>{if(combat.reload
 // Suprimentos coletáveis: implementação própria para o Open World BR.
 // Colocados em áreas abertas, sem depender dos arquivos exclusivos do CoD4.
 const lootSpots=[
- [-6,8,'ammo'],[14,12,'shield'],[-27,18,'med'],[30,-13,'ammo'],
+ // Três caixas perto do ponto de início: visíveis assim que a partida começa.
+ [-3.8,-2,'ammo'],[3.8,-4,'shield'],[0,-9,'med'],
+ [-14,11,'ammo'],[14,12,'shield'],[-27,18,'med'],[30,-13,'ammo'],
  [-47,-7,'shield'],[46,39,'ammo'],[-35,-43,'med'],[65,-17,'ammo'],
  [-12,58,'shield'],[4,-65,'med'],[-73,23,'ammo'],[75,68,'shield']
 ];
-const lootGeometry=new THREE.BoxGeometry(1.1,.73,1.1);
+const lootGeometry=new THREE.BoxGeometry(1.7,1.15,1.7);
 const lootMaterials={
  ammo:new THREE.MeshStandardMaterial({color:0xe8b744,emissive:0x765514,emissiveIntensity:.28,roughness:.54}),
  med:new THREE.MeshStandardMaterial({color:0x55da79,emissive:0x1d6e34,emissiveIntensity:.3,roughness:.54}),
@@ -591,14 +595,17 @@ const lootObjects=lootSpots.map(([x,z,type],i)=>{
  const box=new THREE.Group();box.position.set(x,.5,z);scene.add(box);
  const crate=new THREE.Mesh(lootGeometry,lootMaterials[type]);
  crate.castShadow=true;crate.receiveShadow=true;box.add(crate);
- const strap=new THREE.Mesh(new THREE.BoxGeometry(1.17,.12,1.17),
+ const strap=new THREE.Mesh(new THREE.BoxGeometry(1.85,.13,1.85),
   new THREE.MeshStandardMaterial({color:0x172531,roughness:.8}));
  strap.position.y=.15;box.add(strap);
  const light=new THREE.Mesh(new THREE.OctahedronGeometry(.17,0),
   new THREE.MeshBasicMaterial({color:type==='med'?0x9bffc1:type==='shield'?0x9bd9ff:0xffe891}));
- light.position.y=.66;box.add(light);
+ light.position.y=1.05;box.add(light);
  return {box,type,collected:false,offset:i*.77};
 });
+const lootIndicator=document.getElementById('loot-indicator');
+let collectedLoot=0;
+if(lootIndicator)lootIndicator.textContent='SUPRIMENTOS · 0/'+lootObjects.length;
 let lootTick=0;
 function updateLoot(dt,now){
  lootTick+=dt;
@@ -626,6 +633,8 @@ function updateLoot(dt,now){
   }
   item.collected=true;
   scene.remove(item.box);
+  collectedLoot++;
+  if(lootIndicator)lootIndicator.textContent='SUPRIMENTOS · '+collectedLoot+'/'+lootObjects.length;
   refreshCombat();
   break;
  }
@@ -756,7 +765,14 @@ function updateZone(dt){
  }else zone.damageClock=0;
 }
 const mapCanvas=document.querySelector('#minimap'),mapCtx=mapCanvas.getContext('2d');
-function drawMinimap(){const w=mapCanvas.width,h=mapCanvas.height;mapCtx.clearRect(0,0,w,h);mapCtx.fillStyle='#263b35';mapCtx.fillRect(0,0,w,h);mapCtx.strokeStyle='#9aa89a';mapCtx.lineWidth=9;for(let i=0;i<5;i++){mapCtx.beginPath();mapCtx.moveTo(i*65-20,0);mapCtx.lineTo(i*65+55,h);mapCtx.stroke();}mapCtx.strokeStyle='#ffb52e';mapCtx.lineWidth=4;mapCtx.beginPath();mapCtx.arc(w/2,h/2,91*(zone.radius/zone.startRadius),0,Math.PI*2);mapCtx.stroke();const px=w/2+player.position.x*1.1,pz=h/2+player.position.z*1.1;mapCtx.fillStyle='#ffdf45';mapCtx.beginPath();mapCtx.arc(Math.max(8,Math.min(w-8,px)),Math.max(8,Math.min(h-8,pz)),8,0,Math.PI*2);mapCtx.fill();mapCtx.strokeStyle='#fff';mapCtx.lineWidth=2;mapCtx.stroke();}
+function drawMinimap(){const w=mapCanvas.width,h=mapCanvas.height;mapCtx.clearRect(0,0,w,h);mapCtx.fillStyle='#263b35';mapCtx.fillRect(0,0,w,h);mapCtx.strokeStyle='#9aa89a';mapCtx.lineWidth=9;for(let i=0;i<5;i++){mapCtx.beginPath();mapCtx.moveTo(i*65-20,0);mapCtx.lineTo(i*65+55,h);mapCtx.stroke();}mapCtx.strokeStyle='#ffb52e';mapCtx.lineWidth=4;mapCtx.beginPath();mapCtx.arc(w/2,h/2,91*(zone.radius/zone.startRadius),0,Math.PI*2);mapCtx.stroke();for(const item of lootObjects){
+ if(item.collected)continue;
+ const px=w/2+item.box.position.x*1.1,pz=h/2+item.box.position.z*1.1;
+ if(px<5||px>w-5||pz<5||pz>h-5)continue;
+ mapCtx.fillStyle=item.type==='med'?'#5dff95':item.type==='shield'?'#61ccff':'#ffe879';
+ mapCtx.fillRect(px-3,pz-3,6,6);
+}
+const px=w/2+player.position.x*1.1,pz=h/2+player.position.z*1.1;mapCtx.fillStyle='#ffdf45';mapCtx.beginPath();mapCtx.arc(Math.max(8,Math.min(w-8,px)),Math.max(8,Math.min(h-8,pz)),8,0,Math.PI*2);mapCtx.fill();mapCtx.strokeStyle='#fff';mapCtx.lineWidth=2;mapCtx.stroke();}
 
 let minimapClock=0,hasRenderedFirstFrame=false;
 function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,Math.max(0,(now-last)/1000));last=now;
