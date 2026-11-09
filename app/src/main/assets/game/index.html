@@ -81,12 +81,31 @@
 <!-- Compatibilidade com cópias antigas do script que ainda consultam spots. -->
 <script>var spots = [];</script>
 <script type="importmap">
-{"imports":{"three":"https://esm.sh/three@0.160.0/build/three.module.js"}}
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
+</script>
+<script>
+(function(){
+ const status=document.getElementById('status');
+ let initialized=false;
+ window.addEventListener('openworld:3d-ready',()=>{initialized=true;});
+ window.addEventListener('error',event=>{
+   if(!initialized && status)status.textContent='Erro no motor 3D: '+(event.message||'recurso indisponível');
+ });
+ window.addEventListener('unhandledrejection',event=>{
+   if(!initialized && status)status.textContent='Erro ao iniciar 3D: '+String(event.reason?.message||event.reason||'falha de rede').slice(0,130);
+ });
+ setTimeout(()=>{
+   if(initialized)return;
+   if(status && /Carregando mundo 3D|Carregando personagem 3D/.test(status.textContent)){
+     status.textContent='O motor 3D não iniciou. Verifique a internet e reabra o jogo.';
+   }
+ },15000);
+})();
 </script>
 <script type="module">
 import * as THREE from 'three';
-import {FBXLoader} from 'https://esm.sh/three@0.160.0/examples/jsm/loaders/FBXLoader.js';
-import {GLTFLoader} from 'https://esm.sh/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+import {FBXLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/FBXLoader.js';
+import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 const status=document.querySelector('#status'), root=document.querySelector('#game');
 window.addEventListener('error',e=>{status.textContent='Erro ao iniciar 3D: '+(e.message||'verifique a internet');});
 window.addEventListener('unhandledrejection',e=>{status.textContent='Falha ao carregar recurso 3D • confira a internet';console.error(e.reason);});
@@ -652,7 +671,7 @@ function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,(now-
  const desired=new THREE.Vector3(target.x+Math.sin(angle)*14,8.2,target.z+Math.cos(angle)*14);
  camera.position.lerp(desired,.24);camera.lookAt(target.x,1.1,target.z);
  drawMinimap();renderer.render(scene,camera);
-}requestAnimationFrame(animate);
+}window.dispatchEvent(new Event('openworld:3d-ready'));requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 if(!characterReady)status.textContent='Carregando personagem 3D...';
 </script><script>document.querySelector('script[type="module"]')?.addEventListener('error',()=>{const el=document.querySelector('#status');if(el)el.textContent='Falha ao iniciar o motor 3D • atualize a conexão e tente novamente';});</script></body></html>
