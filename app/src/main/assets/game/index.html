@@ -516,7 +516,8 @@ stick.addEventListener('pointermove',e=>{if(e.pointerId===pointer)setStick(e)});
 function release(e){if(e.pointerId===pointer){pointer=null;move={x:0,y:0};nub.style.transform=''}}
 stick.addEventListener('pointerup',release);stick.addEventListener('pointercancel',release);
 document.querySelector('#vehicle').onclick=()=>{if(driving){driving=false;player.position.copy(car.position);player.position.x+=Math.cos(yaw)*2;player.position.z+=Math.sin(yaw)*2;document.querySelector('#vehicle').textContent='ENTRAR'}else if(player.position.distanceTo(car.position)<5){driving=true;player.position.copy(car.position);document.querySelector('#vehicle').textContent='SAIR'}};
-document.querySelector('#jump').onclick=()=>{if(!driving)jump=1};\n
+document.querySelector('#jump').onclick=()=>{if(!driving)jump=1};
+
 // HUD de combate: seleção de slots, munição, recarga e minimapa.
 const combat={health:100,shield:100,slot:0,ammo:[30,12,1],reserve:[120,48,0],reloading:false};
 const ammoLabel=document.querySelector('#ammo'),toast=document.querySelector('#combat-toast');
