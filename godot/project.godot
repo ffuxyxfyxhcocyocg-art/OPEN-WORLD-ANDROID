@@ -2,7 +2,7 @@
 config_version=5
 
 [application]
-config/name="Open World BR Mobile"
+config/name="SR Battle Royale BR"
 run/main_scene="res://scenes/main.tscn"
 
 [display]
@@ -13,8 +13,8 @@ window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
 [rendering]
-renderer/rendering_method="mobile"
-renderer/rendering_method.mobile="mobile"
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
 environment/defaults/default_clear_color=Color(0.42, 0.68, 0.86, 1)
 
 [physics]
