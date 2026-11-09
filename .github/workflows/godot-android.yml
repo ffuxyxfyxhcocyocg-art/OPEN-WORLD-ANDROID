@@ -61,6 +61,11 @@ jobs:
             keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
           fi
 
+      - name: Copy existing Midas 3D model for Godot import
+        run: |
+          mkdir -p godot/models
+          cp app/src/main/assets/game/models/midas.glb godot/models/midas.glb
+
       - name: Validate project and import assets
         run: |
           /tmp/godot-bin/Godot_v4.4.1-stable_linux.x86_64 --headless --path godot --editor --quit
