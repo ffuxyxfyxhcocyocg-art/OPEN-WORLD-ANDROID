@@ -3,3 +3,4 @@ Retry Android export with debug signing configuration.
 retry preset config e15b208
 
 retry ETC2 ASTC export config
+Rebuild Android APK after fixing debug keystore in export preset.
