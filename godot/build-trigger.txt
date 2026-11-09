@@ -1,1 +1,1 @@
-Trigger corrected Godot Android export after adding editor SDK configuration.
+Retry Android export with debug signing configuration.
