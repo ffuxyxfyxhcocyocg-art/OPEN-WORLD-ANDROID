@@ -170,7 +170,10 @@ func _tracer_effect(start: Vector3, end: Vector3) -> void:
 	beam.global_position = (start + end) * 0.5
 	beam.look_at(end, Vector3.UP)
 	var timer := get_tree().create_timer(0.075)
-	timer.timeout.connect(func(): if is_instance_valid(beam): beam.queue_free())
+	timer.timeout.connect(func():
+		if is_instance_valid(beam):
+			beam.queue_free()
+	)
 
 func _impact_effect(position: Vector3) -> void:
 	var hit_flash := MeshInstance3D.new()
@@ -188,7 +191,10 @@ func _impact_effect(position: Vector3) -> void:
 	hit_flash.global_position = position
 	var tween := create_tween()
 	tween.tween_property(hit_flash, "scale", Vector3(0.01, 0.01, 0.01), 0.22)
-	tween.finished.connect(func(): if is_instance_valid(hit_flash): hit_flash.queue_free())
+	tween.finished.connect(func():
+		if is_instance_valid(hit_flash):
+			hit_flash.queue_free()
+	)
 
 func _reload() -> void:
 	var missing: int = MAGAZINE_MAX[selected_mode] - magazines[selected_mode]
