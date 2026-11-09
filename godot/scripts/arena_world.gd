@@ -20,6 +20,9 @@ func _create_land() -> void:
 	_make_box(Vector3(0, -0.55, 0), Vector3(257, 1.1, 257), Color(0.26, 0.46, 0.28), true, "GrassGround")
 	# Start apron is kept clear for the opening parachute sequence.
 	_make_box(Vector3(0, 0.018, 0), Vector3(18, 0.04, 18), Color(0.35, 0.53, 0.35), false, "ArrivalField")
+	_apply_procedural_surface("Ocean", Color(0.07, 0.34, 0.57), true)
+	_apply_procedural_surface("GrassGround", Color(0.25, 0.48, 0.25), false)
+	_apply_procedural_surface("SandyCoast", Color(0.82, 0.72, 0.51), false)
 
 func _create_districts() -> void:
 	var road_color := Color(0.14, 0.17, 0.20)
@@ -154,6 +157,52 @@ func _make_box(position: Vector3, size: Vector3, color: Color, solid: bool, name
 		collision.shape = col_shape
 		node.add_child(collision)
 	add_child(node)
+
+# Compact animated water and procedural color variation authored for Godot.
+# No borrowed CoD4 textures or other proprietary files.
+func _apply_procedural_surface(node_name: String, color: Color, is_water: bool) -> void:
+	var scene_node := get_node_or_null(node_name)
+	if scene_node == null or scene_node.get_child_count() == 0:
+		return
+	var surface := scene_node.get_child(0) as MeshInstance3D
+	if surface == null:
+		return
+	var shader := Shader.new()
+	if is_water:
+		shader.code = """
+shader_type spatial;
+render_mode unshaded;
+varying vec3 world_pos;
+void vertex() {
+	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+}
+void fragment() {
+	float ripple = sin(world_pos.x * 0.22 + TIME * 0.8) * sin(world_pos.z * 0.27 + TIME * 0.65);
+	float glint = smoothstep(0.69, 0.98, ripple);
+	ALBEDO = mix(vec3(0.04, 0.21, 0.42), vec3(0.15, 0.45, 0.65), ripple * 0.27 + 0.31) + vec3(0.1) * glint;
+	ROUGHNESS = 0.46;
+}
+"""
+	else:
+		shader.code = """
+shader_type spatial;
+uniform vec4 tint : source_color = vec4(0.5, 0.6, 0.4, 1.0);
+varying vec3 world_pos;
+void vertex() {
+	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+}
+void fragment() {
+	vec2 cell = floor(world_pos.xz * 1.8);
+	float speckle = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
+	ALBEDO = tint.rgb * (0.91 + 0.18 * speckle);
+	ROUGHNESS = 0.93;
+}
+"""
+	var material := ShaderMaterial.new()
+	material.shader = shader
+	if not is_water:
+		material.set_shader_parameter("tint", color)
+	surface.material_override = material
 
 func _material(color: Color) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
