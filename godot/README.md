@@ -1,48 +1,42 @@
-# SR Battle Royale BR — Android (Godot 4)
+# SR Battle Royale BR — Android 0.3.0
 
-Nova base nativa e separada do aplicativo WebView anterior. Esta é uma **adaptação em desenvolvimento** das mecânicas de [SR-BattleRoyale](https://github.com/Iswenzz/SR-BattleRoyale), um mod de **Call of Duty 4**, para Godot 4 e Android.
+Implementação **nova e independente em Godot 4** inspirada na estrutura de [Iswenzz/SR-BattleRoyale](https://github.com/Iswenzz/SR-BattleRoyale), mod de Call of Duty 4. O jogo anterior do usuário permanece na branch `main` sem alterações.
 
-## O que já existe nesta base
+## Recursos implementados no protótipo
 
-- Ambiente 3D e cidade low-poly para Android, com câmera em terceira pessoa e joystick de toque.
-- Fases do modo Battle Royale: lobby solo (8s) → voo de transporte → salto → queda com paraquedas → sobrevivência.
-- Zona segura que diminui em cinco etapas e reduz a saúde/escudo do jogador fora do limite.
-- 18 caixas de suprimentos, coleta por proximidade, inventário simples, kits de cura e escudos.
-- HUD de partida e botão para saltar do transporte.
-- Modelo GLB Midas importado no projeto Godot durante a build; avatar alternativo se o modelo falhar.
-- APK compilado pela GitHub Actions do branch `sr-battleroyale-godot`, com package independente `com.openworld.srbattleroyale`.
+- **Cenário 3D original para Android**: ilha, areia, mar animado, ruas, cidade, edifícios, janelas, armazém, farol, porto, floresta de 128 árvores instanciadas, sombras simplificadas e materiais procedurais autorais. **Não é o mapa original `mp_br_blackout`.**
+- **Partida**: lobby, voo de transporte, salto, paraquedas, cinco etapas de zona segura com dano fora da área e final de partida.
+- **Suprimentos**: 18 caixas recolhíveis de munição, kits e escudos; barra de saúde, HUD e inventário simples.
+- **Combate arcade**: três equipamentos fictícios, munição, recarga, alvo central, traçantes luminosos, efeito de impacto, nove drones/alvos com pontuação e reaparecimento.
+- **Multiplayer LAN experimental**: Godot ENet, criar/entrar em sala por IP, no máximo oito participantes, sincronização básica de avatares e sinalização de dano mediada pelo anfitrião. **Não há servidor público na Internet, matchmaking nem teste comprovado de duas pessoas conectadas.** Para conectar fora da mesma rede, seria necessário hospedar um servidor próprio e configurar conectividade.
+- **Personagem**: importação do arquivo `midas.glb` já presente no repositório para Godot; há avatar substituto caso o modelo não seja importado.
+- **Android nativo**: controles de toque, renderizador Compatibility, build automatizada e teste básico de inicialização da cena.
 
-## Ainda não implementado
+## O que NÃO foi convertido
 
-- Multiplayer real com dezenas de jogadores: requer rede, servidor e sincronização.
-- Armas completas, inventário de múltiplos slots, animações dedicadas, veículos e bots.
-- Mapa CoD4 `mp_br_blackout`: **o mapa original não pode ser carregado pelo Godot** sem uma conversão e autorizações apropriadas.
-- Os arquivos `.gsc`, `.iwi`, `.iwd`, `.ff` de CoD4 **não rodam no Android/Godot**. Não foi transferido o jogo/mod completo nem os assets originais de CoD4.
-- Não possui atualizações automáticas de código sem instalar outro APK: o atualizador abre a página do release quando uma versão nova é publicada.
+O repositório original contém `maps/mp/mp_br_blackout.gsc`, que configura zonas e eventos, **mas não contém uma malha do cenário 3D pronta para Godot**. Os recursos `.gsc`, `.iwi` e assets de Call of Duty 4 usam formatos e motor diferentes e não foram importados nem redistribuídos nesta versão. Os modelos e os visuais de terreno deste projeto foram criados do zero ou pertencem ao repositório original do usuário.
 
-## Organização
+Também não há: mapa `mp_br_blackout` idêntico, reproduções dos sons e modelos de CoD4, combate completo com todas as armas do mod, partidas persistentes de 30–40 pessoas e serviço online público. Esta é uma base própria, não o mod completo portado.
 
-- `scripts/main.gd`: cenário e interface mobile existentes.
-- `scripts/player.gd`: controle, câmera touch, paraquedas, importação do Midas.
-- `scripts/battle_royale.gd`: fases, voo, zona, loot e HUD (mecânicas adaptadas).
-- `.github/workflows/godot-android.yml`: importação de modelos, validação e export Android.
+## Arquivos
 
-## Origem e créditos
+- `godot/scripts/main.gd` — cena inicial, jogador, HUD, sistema de atualização.
+- `godot/scripts/arena_world.gd` — terreno, ambiente, cidade, paisagem e materiais originais.
+- `godot/scripts/player.gd` — movimento, câmera, paraquedas, importação do Midas.
+- `godot/scripts/battle_royale.gd` — fase da partida, voo, zona, suprimentos e saúde.
+- `godot/scripts/arcade_combat.gd` — combate arcade, visual de tiro e alvos de treino.
+- `godot/scripts/lan_multiplayer.gd` — ENet, criar/entrar em sala e sincronização básica.
+- `godot/scripts/verify_scene.gd` — teste de integração do projeto inicializado.
+- `.github/workflows/godot-android.yml` — importação do modelo, testes, APK e GitHub Release.
 
-A referência de design e organização da partida é o projeto livre [Iswenzz/SR-BattleRoyale](https://github.com/Iswenzz/SR-BattleRoyale), licenciado em [GPL-3.0](https://github.com/Iswenzz/SR-BattleRoyale/blob/master/LICENSE). O código de Godot foi reescrito em GDScript, não é um empacotamento de CoD4.
+## Executar e instalar
 
-Mapeamento da adaptação:
-- `battleroyale/core/_match.gsc` → gerenciamento de lobby e início da rodada.
-- `battleroyale/core/_plane.gsc` → transporte e salto.
-- `battleroyale/core/_zone.gsc` → redução da zona.
-- `battleroyale/core/_game.gsc` + `huds/_inventory.gsc` → suprimentos e inventário.
+Abra a pasta `godot/` com Godot 4.4.1. No GitHub, acesse **Actions → SR Battle Royale Android** para compilar na branch `sr-battleroyale-godot` e baixar o artefato APK quando a execução ficar verde. A compilação usa Android arm64 e instala como `com.openworld.srbattleroyale`, sem substituir o antigo Open World BR.
 
-Não foram copiados materiais, personagens, mapas, áudio ou texturas proprietários de Call of Duty 4.
+Por ser um jogo Godot nativo, alterar o código exige nova instalação do APK. O botão de atualização apenas abre a página de download — **não instala atualizações silenciosamente**.
 
-## Como compilar
+## Referências e licença
 
-No GitHub, vá até **Actions → SR Battle Royale Android**, selecione a execução recente do branch `sr-battleroyale-godot` e baixe o artifact `SR-BattleRoyale-Android` quando a execução estiver concluída. Dentro do ZIP haverá um APK debug.
+A lógica de fases foi inspirada na organização do repositório original: `_match.gsc`, `_plane.gsc`, `_zone.gsc`, `_game.gsc` e `_inventory.gsc`. Nenhum código GSC é executado no Android. Consultar [Iswenzz/SR-BattleRoyale](https://github.com/Iswenzz/SR-BattleRoyale) e [GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html). Texto de licença incluído em `godot/LICENSE`.
 
-A build exige Godot 4.4.1, templates Android, JDK 17 e Android SDK. O workflow configura essas dependências.
-
-**Nota:** isto é um protótipo jogável em desenvolvimento, não o jogo CoD4 completo, e ainda precisa de testes reais de gameplay em Android.
+**Estado de qualidade:** scripts passam por compilação e teste da cena no CI quando indicados como aprovados; desempenho, gráficos reais e multiplayer entre celulares ainda exigem verificação presencial.
