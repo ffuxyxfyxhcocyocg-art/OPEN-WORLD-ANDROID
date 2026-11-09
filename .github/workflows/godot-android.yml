@@ -74,6 +74,15 @@ jobs:
         run: |
           /tmp/godot-bin/Godot_v4.4.1-stable_linux.x86_64 --headless --path godot --check-only --script res://scripts/battle_royale.gd
 
+      - name: Smoke-test native game scene
+        run: |
+          set -o pipefail
+          /tmp/godot-bin/Godot_v4.4.1-stable_linux.x86_64 --headless --path godot --quit-after 90 2>&1 | tee /tmp/sr-game-smoketest.log
+          if grep -E "SCRIPT ERROR:|Parse Error:|Invalid call\.|Invalid access to property" /tmp/sr-game-smoketest.log; then
+            echo "Godot runtime script errors detected."
+            exit 1
+          fi
+
       - name: Export Android APK
         run: |
           mkdir -p godot/build
