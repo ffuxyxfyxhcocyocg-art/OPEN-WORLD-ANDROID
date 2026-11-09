@@ -573,6 +573,65 @@ document.querySelector('#fire').addEventListener('click',()=>{if(driving){combat
 document.querySelector('#reload').addEventListener('click',()=>{if(combat.reloading||combat.slot===2)return;if(combat.ammo[combat.slot]>=([30,12][combat.slot])||combat.reserve[combat.slot]<=0){combatToast('NÃO PRECISA RECARREGAR');return;}combat.reloading=true;combatToast('RECARREGANDO...');setTimeout(()=>{const cap=[30,12][combat.slot],need=cap-combat.ammo[combat.slot],take=Math.min(need,combat.reserve[combat.slot]);combat.ammo[combat.slot]+=take;combat.reserve[combat.slot]-=take;combat.reloading=false;refreshCombat();combatToast('RECARREGADO');},1250);});
 
 
+
+// Suprimentos coletáveis: implementação própria para o Open World BR.
+// Colocados em áreas abertas, sem depender dos arquivos exclusivos do CoD4.
+const lootSpots=[
+ [-6,8,'ammo'],[14,12,'shield'],[-27,18,'med'],[30,-13,'ammo'],
+ [-47,-7,'shield'],[46,39,'ammo'],[-35,-43,'med'],[65,-17,'ammo'],
+ [-12,58,'shield'],[4,-65,'med'],[-73,23,'ammo'],[75,68,'shield']
+];
+const lootGeometry=new THREE.BoxGeometry(1.1,.73,1.1);
+const lootMaterials={
+ ammo:new THREE.MeshStandardMaterial({color:0xe8b744,emissive:0x765514,emissiveIntensity:.28,roughness:.54}),
+ med:new THREE.MeshStandardMaterial({color:0x55da79,emissive:0x1d6e34,emissiveIntensity:.3,roughness:.54}),
+ shield:new THREE.MeshStandardMaterial({color:0x45b8f0,emissive:0x176993,emissiveIntensity:.3,roughness:.54})
+};
+const lootObjects=lootSpots.map(([x,z,type],i)=>{
+ const box=new THREE.Group();box.position.set(x,.5,z);scene.add(box);
+ const crate=new THREE.Mesh(lootGeometry,lootMaterials[type]);
+ crate.castShadow=true;crate.receiveShadow=true;box.add(crate);
+ const strap=new THREE.Mesh(new THREE.BoxGeometry(1.17,.12,1.17),
+  new THREE.MeshStandardMaterial({color:0x172531,roughness:.8}));
+ strap.position.y=.15;box.add(strap);
+ const light=new THREE.Mesh(new THREE.OctahedronGeometry(.17,0),
+  new THREE.MeshBasicMaterial({color:type==='med'?0x9bffc1:type==='shield'?0x9bd9ff:0xffe891}));
+ light.position.y=.66;box.add(light);
+ return {box,type,collected:false,offset:i*.77};
+});
+let lootTick=0;
+function updateLoot(dt,now){
+ lootTick+=dt;
+ for(const item of lootObjects){
+  if(item.collected)continue;
+  item.box.rotation.y+=dt*.55;
+  item.box.position.y=.48+Math.sin(now*.002+item.offset)*.14;
+ }
+ if(lootTick<.12 || driving)return;
+ lootTick=0;
+ for(const item of lootObjects){
+  if(item.collected)continue;
+  const dx=player.position.x-item.box.position.x,dz=player.position.z-item.box.position.z;
+  if(dx*dx+dz*dz>5.5)continue;
+  if(item.type==='med'){
+   combat.health=Math.min(100,combat.health+35);
+   combatToast('KIT MÉDICO COLETADO');
+  }else if(item.type==='shield'){
+   combat.shield=Math.min(100,combat.shield+35);
+   combatToast('ESCUDO COLETADO');
+  }else{
+   combat.reserve[0]=Math.min(999,combat.reserve[0]+30);
+   combat.reserve[1]=Math.min(999,combat.reserve[1]+12);
+   combatToast('MUNIÇÃO COLETADA');
+  }
+  item.collected=true;
+  scene.remove(item.box);
+  refreshCombat();
+  break;
+ }
+}
+
+
 /* Fases locais inspiradas no TABGCppServer. Multiplayer online ainda requer servidor conectado. */
 const match={state:"waiting",elapsed:0,waiting:12,flying:5,players:[{id:"local-player",team:1,connected:true}]};
 const phaseState=document.querySelector("#phase-state");
@@ -708,6 +767,7 @@ function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,Math.
  }
  updateMatchPhase(dt);
  updateZone(dt);
+ updateLoot(dt,now);
  const heading=((cameraYaw*180/Math.PI)%360+360)%360;
  const compass=document.getElementById('compass-readout');
  if(compass)compass.textContent='NAVEGAÇÃO  '+String(Math.round(heading)).padStart(3,'0')+'°';
