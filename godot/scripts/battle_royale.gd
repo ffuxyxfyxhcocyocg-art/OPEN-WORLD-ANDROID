@@ -1,5 +1,7 @@
 extends Node3D
 
+const BattleMapScript = preload("res://scripts/battle_map.gd")
+
 # Protótipo Android nativo inspirado na estrutura de SR-BattleRoyale:
 # lobby -> transporte -> salto -> sobrevivência -> zona que diminui.
 # Código original em GDScript; NÃO executa scripts GSC do Call of Duty 4.
@@ -10,6 +12,7 @@ var phase: int = Phase.LOBBY
 var phase_timer := 0.0
 var match_timer := 0.0
 var zone_radius := 108.0
+var zone_center := Vector2(-8.696, -14.212)
 var health := 100.0
 var shield := 100.0
 var supplies := {"ammo": 0, "med": 0, "shield": 0}
@@ -28,6 +31,15 @@ var inventory_label: Label
 var drop_button: Button
 var heal_button: Button
 
+# Adapted positions from the original GPL-licensed mp_br_blackout.gsc zone list.
+# The terrain below is original Godot geometry; these are scaled gameplay anchors.
+const ZONE_CANDIDATES := [
+	Vector2(-8.696, -14.212), Vector2(4.016, -31.312),
+	Vector2(-10.688, -53.140), Vector2(1.092, 4.624),
+	Vector2(-44.796, -27.304), Vector2(-81.756, -44.416),
+	Vector2(-54.120, -5.284), Vector2(31.564, -8.524),
+	Vector2(30.896, 26.908)
+]
 const ZONE_STAGES := [108.0, 72.0, 44.0, 22.0, 9.0]
 const ZONE_SECONDS := [20.0, 32.0, 30.0, 27.0, 27.0]
 const LOOT_POSITIONS := [
@@ -153,7 +165,7 @@ func _build_zone() -> void:
 	mat.emission = Color(1.0, 0.5, 0.05)
 	mat.emission_energy_multiplier = 1.1
 	zone_mesh.material_override = mat
-	zone_mesh.position.y = 0.35
+	zone_mesh.position = Vector3(zone_center.x, 0.35, zone_center.y)
 	add_child(zone_mesh)
 	_update_zone_ring()
 
@@ -176,7 +188,7 @@ func _tick_zone(delta: float) -> void:
 		zone_radius = ZONE_STAGES[i + 1]
 	_update_zone_ring()
 	var location := Vector2(player.global_position.x, player.global_position.z)
-	if location.length() > zone_radius:
+	if location.distance_to(zone_center) > zone_radius:
 		damage_timer += delta
 		if damage_timer >= 1.0:
 			damage_timer = 0.0
@@ -240,6 +252,18 @@ func _build_hud() -> void:
 	hud = CanvasLayer.new()
 	hud.name = "BattleRoyaleHUD"
 	add_child(hud)
+	var minimap = BattleMapScript.new()
+	minimap.name = "BattleMinimap"
+	minimap.anchor_left = 1.0
+	minimap.anchor_right = 1.0
+	minimap.anchor_top = 0.0
+	minimap.anchor_bottom = 0.0
+	minimap.offset_left = -205
+	minimap.offset_right = -15
+	minimap.offset_top = 18
+	minimap.offset_bottom = 208
+	minimap.setup(player, self)
+	hud.add_child(minimap)
 	title_label = _label("SR BATTLE ROYALE · ANDROID", Vector2(16, 108), 21, Color(1.0, 0.92, 0.68))
 	status_label = _label("PREPARANDO PARTIDA", Vector2(16, 139), 19, Color.WHITE)
 	zone_label = _label("ZONA SEGURA", Vector2(16, 173), 17, Color(1.0, 0.75, 0.32))
