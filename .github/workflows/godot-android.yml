@@ -24,12 +24,13 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Install Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android platform tools
+      - name: Install Android SDK packages
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
         run: |
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort | tail -n 1)"
+          yes | "$SDKMANAGER" --licenses
+          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Download Godot 4.4.1 and Android export templates
         run: |
