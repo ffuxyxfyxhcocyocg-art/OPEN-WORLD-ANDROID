@@ -48,8 +48,12 @@ public class MainActivity extends Activity {
         gameView.setWebViewClient(new WebViewClient());
         gameView.setWebChromeClient(new WebChromeClient());
         setContentView(gameView);
-        // Abre a cópia local imediatamente e substitui pela versão remota assim que baixar.
-        gameView.loadUrl("file:///android_asset/game/index.html");
+        // Primeiro verifica a versão remota; não exibe uma versão antiga/defeituosa do jogo enquanto baixa.
+        gameView.loadDataWithBaseURL(BASE_URL,
+            "<!doctype html><html lang='pt-BR'><head><meta name='viewport' content='width=device-width,initial-scale=1'></head>" +
+            "<body style='margin:0;background:#142735;color:#fff;font-family:sans-serif;display:grid;place-items:center;height:100vh;text-align:center'>" +
+            "<div><h2 style='letter-spacing:3px'>OPEN WORLD BR</h2><p>Preparando cenário 3D atualizado...</p></div></body></html>",
+            "text/html", "UTF-8", null);
         loadRemoteGame();
         checkRemoteVersion();
     }
@@ -104,7 +108,9 @@ public class MainActivity extends Activity {
                         gameView.loadDataWithBaseURL(BASE_URL, result, "text/html", "UTF-8", null);
                     }
                 } else if (loadedHtml.isEmpty()) {
-                    Toast.makeText(this, "Não foi possível atualizar o jogo: " + errorText, Toast.LENGTH_LONG).show();
+                    // Se o download falhar, a cópia instalada continua disponível como plano B.
+                    gameView.loadUrl("file:///android_asset/game/index.html");
+                    Toast.makeText(this, "Sem atualização online: usando versão instalada.", Toast.LENGTH_LONG).show();
                 }
             });
         }).start();
@@ -148,6 +154,7 @@ public class MainActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         if (gameView != null) gameView.onResume();
+        if (loadedHtml.isEmpty() && !loadingRemote) loadRemoteGame();
         handler.removeCallbacks(updateCheck);
         handler.postDelayed(updateCheck, 60000);
     }
