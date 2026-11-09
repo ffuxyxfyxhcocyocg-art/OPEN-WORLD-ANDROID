@@ -1,8 +1,8 @@
-name: Godot Android APK
+name: SR Battle Royale Android
 
 on:
   push:
-    branches: [godot-native]
+    branches: [sr-battleroyale-godot]
     paths:
       - "godot/**"
       - ".github/workflows/godot-android.yml"
@@ -65,6 +65,10 @@ jobs:
         run: |
           /tmp/godot-bin/Godot_v4.4.1-stable_linux.x86_64 --headless --path godot --editor --quit
 
+      - name: Check native battle royale script
+        run: |
+          /tmp/godot-bin/Godot_v4.4.1-stable_linux.x86_64 --headless --path godot --check-only --script res://scripts/battle_royale.gd
+
       - name: Export Android APK
         run: |
           mkdir -p godot/build
@@ -73,15 +77,15 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: OpenWorldBR-Godot-Android
+          name: SR-BattleRoyale-Android
           path: godot/build/OpenWorldBR-debug.apk
           if-no-files-found: error
 
       - name: Publish APK release for in-game updater
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.1.1
-          name: Open World BR Mobile v0.1.1
+          tag_name: v0.2.0-sr-br
+          name: SR Battle Royale Android v0.2.0
           make_latest: true
           overwrite_files: true
           files: godot/build/OpenWorldBR-debug.apk
