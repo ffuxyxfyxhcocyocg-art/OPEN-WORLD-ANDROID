@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   export-android:
@@ -76,3 +76,12 @@ jobs:
           name: OpenWorldBR-Godot-Android
           path: godot/build/OpenWorldBR-debug.apk
           if-no-files-found: error
+
+      - name: Publish APK release for in-game updater
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.1.1
+          name: Open World BR Mobile v0.1.1
+          make_latest: true
+          overwrite_files: true
+          files: godot/build/OpenWorldBR-debug.apk
