@@ -1,1 +1,1 @@
-Trigger a fresh Godot Android build after CI configuration update.
+Trigger corrected Godot Android export after adding editor SDK configuration.
