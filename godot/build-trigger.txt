@@ -1,1 +1,3 @@
 Retry Android export with debug signing configuration.
+
+retry preset config e15b208
