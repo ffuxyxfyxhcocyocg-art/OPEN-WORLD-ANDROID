@@ -2,12 +2,21 @@ extends Node3D
 
 const PlayerScript = preload("res://scripts/player.gd")
 const JoystickScript = preload("res://scripts/mobile_joystick.gd")
+const CURRENT_VERSION := "0.1.0"
+const UPDATE_INFO_URL := "https://raw.githubusercontent.com/ffuxyxfyxhcocyocg-art/OPEN-WORLD-ANDROID/godot-native/update_info.json"
+
 var player: CharacterBody3D
+var update_request: HTTPRequest
+var update_button: Button
+var update_status: Label
+var update_download_url := ""
 
 func _ready() -> void:
 	_build_world()
 	_build_player()
 	_build_hud()
+	_setup_updater()
+	_check_for_updates()
 
 func _build_world() -> void:
 	var env := WorldEnvironment.new()
@@ -85,6 +94,83 @@ func _build_hud() -> void:
 	layer.add_child(run_button)
 	run_button.toggle_mode = true
 	run_button.toggled.connect(player.set_running)
+
+func _setup_updater() -> void:
+	update_request = HTTPRequest.new()
+	update_request.timeout = 15.0
+	add_child(update_request)
+	update_request.request_completed.connect(_on_update_info_received)
+
+	update_status = Label.new()
+	update_status.text = "Versão " + CURRENT_VERSION
+	update_status.add_theme_font_size_override("font_size", 18)
+	update_status.add_theme_color_override("font_color", Color.WHITE)
+	update_status.anchor_left = 0.0
+	update_status.anchor_right = 0.0
+	update_status.anchor_top = 0.0
+	update_status.anchor_bottom = 0.0
+	update_status.offset_left = 18
+	update_status.offset_top = 14
+	update_status.offset_right = 330
+	update_status.offset_bottom = 44
+	update_status.add_theme_color_override("font_shadow_color", Color.BLACK)
+	update_status.add_theme_constant_override("shadow_offset_x", 2)
+	update_status.add_theme_constant_override("shadow_offset_y", 2)
+	get_node("..").add_child.call_deferred(update_status) if false else add_child(update_status)
+
+	update_button = Button.new()
+	update_button.text = "VERIFICAR ATUALIZAÇÃO"
+	update_button.add_theme_font_size_override("font_size", 16)
+	update_button.anchor_left = 0.0
+	update_button.anchor_right = 0.0
+	update_button.anchor_top = 0.0
+	update_button.anchor_bottom = 0.0
+	update_button.offset_left = 18
+	update_button.offset_top = 48
+	update_button.offset_right = 270
+	update_button.offset_bottom = 94
+	add_child(update_button)
+	update_button.pressed.connect(_on_update_button_pressed)
+
+func _check_for_updates() -> void:
+	if update_request.request(UPDATE_INFO_URL) != OK:
+		update_status.text = "Não foi possível verificar atualizações"
+
+func _on_update_button_pressed() -> void:
+	if not update_download_url.is_empty():
+		OS.shell_open(update_download_url)
+	else:
+		update_status.text = "Verificando atualização..."
+		_check_for_updates()
+
+func _on_update_info_received(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
+		update_status.text = "Sem conexão para verificar atualizações"
+		return
+	var data = JSON.parse_string(body.get_string_from_utf8())
+	if typeof(data) != TYPE_DICTIONARY or not data.has("version") or not data.has("download_url"):
+		update_status.text = "Não foi possível ler a versão disponível"
+		return
+	var latest := str(data["version"])
+	update_download_url = str(data["download_url"])
+	if _is_newer_version(latest, CURRENT_VERSION):
+		update_status.text = "Nova versão disponível: " + latest
+		update_button.text = "BAIXAR ATUALIZAÇÃO"
+	else:
+		update_status.text = "Jogo atualizado • v" + CURRENT_VERSION
+		update_button.text = "VERIFICAR NOVAMENTE"
+
+func _is_newer_version(remote: String, local: String) -> bool:
+	var remote_parts := remote.split(".")
+	var local_parts := local.split(".")
+	for i in range(3):
+		var remote_value := int(remote_parts[i]) if i < remote_parts.size() else 0
+		var local_value := int(local_parts[i]) if i < local_parts.size() else 0
+		if remote_value > local_value:
+			return true
+		if remote_value < local_value:
+			return false
+	return false
 
 func _make_button(caption: String, offset: Vector2) -> Button:
 	var button := Button.new()
