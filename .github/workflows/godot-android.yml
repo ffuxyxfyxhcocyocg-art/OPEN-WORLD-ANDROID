@@ -32,7 +32,7 @@ jobs:
         run: |
           SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort | tail -n 1)"
           yes | "$SDKMANAGER" --licenses
-          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0" "cmdline-tools;latest" "ndk;27.2.12479018" "cmake;3.10.2.4988404"
 
       - name: Download Godot 4.4.1 and Android export templates
         run: |
@@ -53,6 +53,9 @@ jobs:
           [resource]
           export/android/android_sdk_path = "$ANDROID_HOME"
           export/android/java_sdk_path = "$JAVA_HOME"
+          export/android/debug_keystore = "$HOME/.android/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
           EOF
           if [ ! -f "$HOME/.android/debug.keystore" ]; then
             keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
@@ -65,7 +68,7 @@ jobs:
       - name: Export Android APK
         run: |
           mkdir -p godot/build
-          /tmp/godot-bin/Godot_v4.4.1-stable_linux.x86_64 --headless --path godot --export-debug "Android" godot/build/OpenWorldBR-debug.apk
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android/debug.keystore" GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey" GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android" /tmp/godot-bin/Godot_v4.4.1-stable_linux.x86_64 --headless --verbose --path godot --export-debug "Android" godot/build/OpenWorldBR-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
