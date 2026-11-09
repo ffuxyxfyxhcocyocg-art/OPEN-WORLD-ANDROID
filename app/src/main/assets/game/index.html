@@ -74,6 +74,8 @@
 
 #match-info #phase-state,#match-info #phase-clock{display:block;text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.3px;background:#111923e8;border-top:1px solid #ffffff22}
 #match-info #phase-clock{color:#ffd45b;font-size:11px}
+#midas-indicator{position:fixed;right:10px;top:72px;z-index:9;pointer-events:none;background:#182739dc;color:#ffe39b;border:1px solid #e6c57166;border-radius:8px;padding:6px 10px;font-size:10px;font-weight:bold;max-width:50vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:600px){#midas-indicator{right:5px;top:53px;font-size:8px;max-width:42vw;padding:5px 6px}}
 #loot-indicator{position:fixed;top:35px;right:10px;z-index:9;pointer-events:none;background:#12302bdc;color:#bdf6d2;border:1px solid #85efb267;border-radius:8px;padding:7px 10px;font-size:11px;font-weight:800;letter-spacing:.5px;text-shadow:0 1px 2px #0005}
 @media(max-width:600px){#loot-indicator{top:27px;right:5px;font-size:9px;padding:5px 6px}}
 #build-tag{position:fixed;right:10px;top:8px;z-index:9;pointer-events:none;padding:6px 9px;background:#152b35aa;border:1px solid #ffffff33;border-radius:10px;color:#eef8fa;font-size:10px;font-weight:800;letter-spacing:.5px;text-shadow:0 1px 2px #0005}
@@ -98,7 +100,7 @@
 @media(max-width:700px){#minimap-wrap{width:112px;height:112px}#match-info{top:123px;width:112px;font-size:11px}#compass{top:3px}#zone-warning{top:45px;font-size:9px}#weapon-slots{bottom:29px}.weapon-slot{width:60px;height:43px;font-size:9px}#vitals{width:42vw}#status{font-size:10px}}
 </style>
 </head>
-<body><div id="game"></div><div id="top">OPEN WORLD • ANDROID</div><div id="build-tag">OPEN WORLD BR · v44</div><div id="loot-indicator">SUPRIMENTOS · CARREGANDO</div><div id="status">Carregando mundo 3D v44...</div>
+<body><div id="game"></div><div id="top">OPEN WORLD • ANDROID</div><div id="build-tag">OPEN WORLD BR · v45</div><div id="loot-indicator">SUPRIMENTOS · CARREGANDO</div><div id="midas-indicator">MIDAS · AGUARDANDO</div><div id="status">Carregando mundo 3D v45...</div>
 <div id="combat-hud"><div id="match-info"><div><b>ALIVE</b> <strong>1</strong> <span>KILLED</span> <strong>0</strong></div><small id="phase-state">● LOBBY • AGUARDANDO PARTIDA</small><small id="phase-clock">PARTIDA COMEÇA EM 00:12</small></div><div id="compass"><span id="compass-readout">N 000°</span><div class="compass-line">W　NW　N　NE　E　SE　S　SW</div></div><div id="zone-warning">⚠ A ZONA SEGURA VAI DIMINUIR</div><div id="minimap-wrap"><canvas id="minimap" width="232" height="232"></canvas></div><div id="vitals"><div style="font-size:10px">VIDA <span id="health-num">100</span></div><div class="bar"><i id="health-fill"></i></div><div style="font-size:10px">ESCUDO <span id="shield-num">100</span></div><div class="bar"><i id="shield-fill"></i></div></div><div id="weapon-slots"><button class="weapon-slot active" data-slot="0">1 • AR</button><button class="weapon-slot" data-slot="1">2 • PIST</button><button class="weapon-slot" data-slot="2">3 • GRAN</button></div><div id="ammo">30 / 120</div><div id="combat-actions"><button id="reload">RECARREGAR</button><button id="fire">ATIRAR</button></div><div id="combat-toast">ARMA SELECIONADA</div></div>\n<div id="controls"><div id="look" aria-label="Arraste para girar a câmera"></div><div id="stick"><div id="nub"></div></div><div id="hint">ESQUERDA: MOVER • DIREITA: GIRAR CÂMERA</div><button class="btn" id="jump">PULAR</button><button class="btn" id="vehicle">ENTRAR</button></div>
 <!-- Compatibilidade com cópias antigas do script que ainda consultam spots. -->
 <script>var spots = [];</script>
@@ -388,6 +390,12 @@ characterManager.setURLModifier(url=>{
 });
 const characterLoader=new FBXLoader(characterManager);
 const glbCharacterLoader=new GLTFLoader();
+const midasIndicator=document.getElementById('midas-indicator');
+function midasState(text,ok=false){
+  if(!midasIndicator)return;
+  midasIndicator.textContent='MIDAS · '+text;
+  midasIndicator.style.color=ok?'#9affb7':'#ffe39b';
+}
 let characterMixer=null,idleAction=null,runAction=null,isMoving=false,characterReady=false,midasFailureReason='';
 let proceduralBones=[],gaitClock=0;
 function updateCharacterAnimation(running){
@@ -417,7 +425,10 @@ function attachCharacter(model,animations=[],label='Personagem GLB'){
   const visualRoot=new THREE.Group();
   visualRoot.name='MidasVisualRoot';
   visualRoot.add(model);
-  model.updateMatrixWorld(true);
+  // O Sketchfab exportou o personagem com -90 graus no eixo X.
+  // Corrigimos antes de medir a altura: sem isso ele fica deitado no plano XZ.
+  visualRoot.rotation.x=Math.PI/2;
+  visualRoot.updateMatrixWorld(true);
   // Calcula os limites a partir das geometrias dos meshes. Em GLBs com
   // esqueleto/animação, o Box3 automático pode retornar altura zero ou inválida.
   // Mede o modelo já com a hierarquia e as matrizes atualizadas.
@@ -426,7 +437,7 @@ function attachCharacter(model,animations=[],label='Personagem GLB'){
   // em personagens GLB com esqueleto.
   model.updateMatrixWorld(true);
   model.traverse(o=>{if(o.isSkinnedMesh&&o.skeleton)o.skeleton.update();});
-  let bounds=new THREE.Box3().setFromObject(model,true);
+  let bounds=new THREE.Box3().setFromObject(visualRoot,true);
   let size=bounds.getSize(new THREE.Vector3());
   if(!Number.isFinite(size.y)||size.y<0.05){
    // Segunda tentativa: união dos limites locais de cada mesh transformados
@@ -459,7 +470,8 @@ function attachCharacter(model,animations=[],label='Personagem GLB'){
     materials.forEach(m=>{if(!m)return;m.visible=true;if(m.map)m.map.colorSpace=THREE.SRGBColorSpace;m.needsUpdate=true;});
    }
   });
-  body.visible=false;head.visible=false;
+  // O avatar provisório foi substituído por várias peças. Variáveis antigas
+  // 'body'/'head' não existem mais e provocavam ReferenceError a cada carga.
   player.clear();player.rotation.set(0,0,0);player.visible=true;
   player.add(visualRoot);
   visualRoot.visible=true;
@@ -494,6 +506,7 @@ function attachCharacter(model,animations=[],label='Personagem GLB'){
    });
   }
   if(idleAction)idleAction.play();
+  midasState('CARREGADO',true);
   status.textContent=label+(runAction?' • animação de corrida':proceduralBones.length?' • caminhada procedural':' • modelo carregado');
  }function loadFallbackFBX(){
  characterLoader.load(characterBase+'Ch46_nonPBR.fbx',model=>{
@@ -510,27 +523,47 @@ function attachCharacter(model,animations=[],label='Personagem GLB'){
  },undefined,error=>{console.error('Falha no FBX reserva:',error);status.textContent='Falha ao carregar personagem 3D';});
 }
 async function loadMidasGLB(){
- const url=midasUrl+'?v=26&t='+Date.now();
+ const urls=[
+  midasUrl+'?v=45',
+  'https://cdn.jsdelivr.net/gh/ffuxyxfyxhcocyocg-art/OPEN-WORLD-ANDROID@main/app/src/main/assets/game/models/midas.glb'
+ ];
+ midasState('BAIXANDO MODELO');
  try{
   status.textContent='Baixando personagem Midas...';
-  const response=await fetch(url,{cache:'no-store'});
-  if(!response.ok)throw new Error('HTTP '+response.status+' ao buscar midas.glb');
-  const data=await response.arrayBuffer();
+  let data=null,lastError='';
+  for(const url of urls){
+   try{
+    const response=await fetch(url,{cache:'default'});
+    if(!response.ok)throw new Error('HTTP '+response.status);
+    data=await response.arrayBuffer();
+    if(data.byteLength<20||new DataView(data).getUint32(0,true)!==0x46546C67){
+     throw new Error('arquivo GLB incompleto');
+    }
+    break;
+   }catch(downloadError){
+    lastError=downloadError.message||String(downloadError);
+    data=null;
+   }
+  }
+  if(!data)throw new Error('falha nas duas fontes de modelo: '+lastError);
   if(data.byteLength<20)throw new Error('Arquivo GLB vazio/incompleto ('+data.byteLength+' bytes)');
   if(new DataView(data).getUint32(0,true)!==0x46546C67)throw new Error('Arquivo recebido não possui assinatura GLB válida');
   status.textContent='Midas recebido • interpretando modelo...';
+  midasState('INTERPRETANDO 3D');
   glbCharacterLoader.parse(data,'',gltf=>{
    try{attachCharacter(gltf.scene,gltf.animations,'Midas GLB carregado');}
-   catch(error){console.error('Erro ao montar Midas:',error);midasFailureReason='montagem: '+(error.message||'modelo inválido');status.textContent='Erro ao montar Midas: '+midasFailureReason+' • reserva FBX';loadFallbackFBX();}
+   catch(error){console.error('Erro ao montar Midas:',error);midasFailureReason='montagem: '+(error.message||'modelo inválido');midasState('ERRO: '+midasFailureReason);status.textContent='Erro ao montar Midas: '+midasFailureReason+' • reserva FBX';loadFallbackFBX();}
   },error=>{
    console.error('Erro ao interpretar Midas GLB:',error);
    midasFailureReason='leitura GLB: '+(error.message||'falha de leitura');
+   midasState('ERRO: '+midasFailureReason);
    status.textContent='GLB inválido: '+midasFailureReason+' • reserva FBX';
    loadFallbackFBX();
   });
  }catch(error){
   console.error('Falha no download do Midas GLB:',error);
   midasFailureReason='download: '+(error.message||'erro de rede');
+  midasState('ERRO: '+midasFailureReason);
   status.textContent='Falha Midas: '+midasFailureReason+' • reserva FBX';
   loadFallbackFBX();
  }
