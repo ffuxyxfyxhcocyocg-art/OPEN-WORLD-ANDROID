@@ -74,6 +74,24 @@
 
 #match-info #phase-state,#match-info #phase-clock{display:block;text-align:center;padding:5px 4px;font-size:10px;font-weight:800;letter-spacing:.3px;background:#111923e8;border-top:1px solid #ffffff22}
 #match-info #phase-clock{color:#ffd45b;font-size:11px}
+/* HUD premium compacto e botões confortáveis no modo paisagem */
+#combat-hud{filter:drop-shadow(0 2px 6px #07101935)}
+#minimap-wrap{border-radius:14px;background:#112a2ceb;border:2px solid #d8e9e9a8;box-shadow:0 5px 18px #0008}
+#match-info{border-radius:10px;overflow:hidden;border:1px solid #ffffff32;box-shadow:0 4px 16px #0007}
+#compass{border-radius:0 0 12px 12px;border:1px solid #ffffff38;background:linear-gradient(180deg,#142735df,#142735a8)}
+#zone-warning{border:1px solid #ffdf7766;border-radius:8px;background:#292e35d9;color:#ffe8b3}
+#vitals{border:1px solid #ffffff2a;border-radius:10px;background:#11232ce6;padding:6px 10px}
+.bar{height:8px;border-radius:7px}
+#health-fill{background:linear-gradient(90deg,#4ee987,#a3f1a6)}
+#shield-fill{background:linear-gradient(90deg,#2b92ff,#80deff)}
+.weapon-slot{border-radius:9px;background:#12212ae8;box-shadow:0 2px 9px #0006}
+.weapon-slot.active{border:2px solid #ffd45b;background:#284657ef}
+#fire{background:linear-gradient(140deg,#ca3f3e,#7f171c);border:2px solid #ffffffb5}
+#reload,#jump,#vehicle{background:linear-gradient(145deg,#2d4558ec,#17232fec);border:1px solid #ffffff9b}
+#stick{background:#0b1c2a9c;box-shadow:inset 0 0 0 10px #ffffff0d,0 6px 18px #0005}
+#nub{background:#dceaf1bd}
+#status{z-index:22;bottom:6px;max-width:76vw;text-align:center;pointer-events:none;font-size:12px;background:#10202deb;border-radius:8px}
+@media(max-width:700px){#minimap-wrap{width:112px;height:112px}#match-info{top:123px;width:112px;font-size:11px}#compass{top:3px}#zone-warning{top:45px;font-size:9px}#weapon-slots{bottom:29px}.weapon-slot{width:60px;height:43px;font-size:9px}#vitals{width:42vw}#status{font-size:10px}}
 </style>
 </head>
 <body><div id="game"></div><div id="top">OPEN WORLD • ANDROID</div><div id="status">Carregando mundo 3D...</div>
@@ -111,10 +129,11 @@ window.addEventListener('error',e=>{status.textContent='Erro ao iniciar 3D: '+(e
 window.addEventListener('unhandledrejection',e=>{status.textContent='Falha ao carregar recurso 3D • confira a internet';console.error(e.reason);});
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x1687df);scene.fog=new THREE.Fog(0x8fc3df,155,330);
 const camera=new THREE.PerspectiveCamera(72,innerWidth/innerHeight,.1,520);
-const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;root.appendChild(renderer.domElement);
+const isMobile=(navigator.maxTouchPoints>0 || matchMedia('(pointer:coarse)').matches);
+const renderer=new THREE.WebGLRenderer({antialias:!isMobile,powerPreference:'high-performance',alpha:false});
+renderer.setPixelRatio(Math.min(devicePixelRatio,isMobile?1.2:1.75));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;root.appendChild(renderer.domElement);
 scene.add(new THREE.HemisphereLight(0xffffff,0x64745c,2));
-const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(-65,95,45);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-205;sun.shadow.camera.right=205;sun.shadow.camera.top=205;sun.shadow.camera.bottom=-205;sun.shadow.camera.near=1;sun.shadow.camera.far=320;sun.shadow.bias=-0.00012;sun.shadow.normalBias=.035;scene.add(sun);
+const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(-65,95,45);sun.castShadow=true;sun.shadow.mapSize.set(isMobile?1024:2048,isMobile?1024:2048);sun.shadow.camera.left=-205;sun.shadow.camera.right=205;sun.shadow.camera.top=205;sun.shadow.camera.bottom=-205;sun.shadow.camera.near=1;sun.shadow.camera.far=320;sun.shadow.bias=-0.00012;sun.shadow.normalBias=.035;scene.add(sun);
 const mat=(c)=>new THREE.MeshStandardMaterial({color:c,roughness:.82});
 
 function surfaceTexture(base,detail,kind){
@@ -323,8 +342,31 @@ for(const mesh of [windowInstances,sideWindowInstances,sillInstances,sideSillIns
 const player=new THREE.Group();player.rotation.set(0,0,0);player.castShadow=true;player.receiveShadow=true;scene.add(player);
 // Âncora independente para o GLB: evita herdar transformações inesperadas do grupo de controle.
 // O personagem é filho direto do grupo player.
-const body=new THREE.Mesh(new THREE.BoxGeometry(.65,1,.38),mat(0x174eaa));body.position.y=1;player.add(body);
-const head=new THREE.Mesh(new THREE.SphereGeometry(.23,12,10),mat(0xc99570));head.position.y=1.68;player.add(head);
+// Avatar provisório detalhado: aparece imediatamente enquanto o modelo GLB baixa.
+const avatarParts={};
+const avatarMaterial={
+ jacket:mat(0x2962a0),pants:mat(0x263142),skin:mat(0xd4a075),shoes:mat(0x181d28),accent:mat(0xf1cf66)
+};
+function avatarPart(geometry,material,x,y,z,parent=player){
+ const mesh=new THREE.Mesh(geometry,material);
+ mesh.position.set(x,y,z);mesh.castShadow=true;parent.add(mesh);return mesh;
+}
+avatarPart(new THREE.CylinderGeometry(.24,.31,.83,10),avatarMaterial.jacket,0,1.3,0);
+avatarPart(new THREE.BoxGeometry(.38,.075,.37),avatarMaterial.accent,0,1.65,0);
+avatarPart(new THREE.SphereGeometry(.23,16,12),avatarMaterial.skin,0,1.94,0);
+avatarPart(new THREE.CylinderGeometry(.24,.25,.13,12),avatarMaterial.jacket,0,2.14,0);
+avatarParts.armLeft=new THREE.Group();avatarParts.armLeft.position.set(-.34,1.55,0);player.add(avatarParts.armLeft);
+avatarParts.armRight=new THREE.Group();avatarParts.armRight.position.set(.34,1.55,0);player.add(avatarParts.armRight);
+for(const a of [avatarParts.armLeft,avatarParts.armRight]){
+ avatarPart(new THREE.CylinderGeometry(.105,.09,.61,8),avatarMaterial.jacket,0,-.31,0,a);
+ avatarPart(new THREE.SphereGeometry(.104,8,6),avatarMaterial.skin,0,-.66,0,a);
+}
+avatarParts.legLeft=new THREE.Group();avatarParts.legLeft.position.set(-.15,.96,0);player.add(avatarParts.legLeft);
+avatarParts.legRight=new THREE.Group();avatarParts.legRight.position.set(.15,.96,0);player.add(avatarParts.legRight);
+for(const l of [avatarParts.legLeft,avatarParts.legRight]){
+ avatarPart(new THREE.CylinderGeometry(.135,.115,.75,9),avatarMaterial.pants,0,-.4,0,l);
+ avatarPart(new THREE.BoxGeometry(.24,.15,.38),avatarMaterial.shoes,0,-.8,-.09,l);
+}
 player.position.set(0,0,3);
 
 // Midas GLB (principal). Se o arquivo ainda não estiver hospedado, usa o Ch46 FBX como fallback.
@@ -654,7 +696,13 @@ function updateZone(dt){
 const mapCanvas=document.querySelector('#minimap'),mapCtx=mapCanvas.getContext('2d');
 function drawMinimap(){const w=mapCanvas.width,h=mapCanvas.height;mapCtx.clearRect(0,0,w,h);mapCtx.fillStyle='#263b35';mapCtx.fillRect(0,0,w,h);mapCtx.strokeStyle='#9aa89a';mapCtx.lineWidth=9;for(let i=0;i<5;i++){mapCtx.beginPath();mapCtx.moveTo(i*65-20,0);mapCtx.lineTo(i*65+55,h);mapCtx.stroke();}mapCtx.strokeStyle='#ffb52e';mapCtx.lineWidth=4;mapCtx.beginPath();mapCtx.arc(w/2,h/2,91*(zone.radius/zone.startRadius),0,Math.PI*2);mapCtx.stroke();const px=w/2+player.position.x*1.1,pz=h/2+player.position.z*1.1;mapCtx.fillStyle='#ffdf45';mapCtx.beginPath();mapCtx.arc(Math.max(8,Math.min(w-8,px)),Math.max(8,Math.min(h-8,pz)),8,0,Math.PI*2);mapCtx.fill();mapCtx.strokeStyle='#fff';mapCtx.lineWidth=2;mapCtx.stroke();}
 
-function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,(now-last)/1000);last=now;
+let minimapClock=0,hasRenderedFirstFrame=false;
+function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,Math.max(0,(now-last)/1000));last=now;
+ if(!characterReady){
+  const walking=Math.hypot(move.x,move.y)>.12&&!driving, swing=walking?Math.sin(now*.011)*.6:0;
+  avatarParts.legLeft.rotation.x=swing;avatarParts.legRight.rotation.x=-swing;
+  avatarParts.armLeft.rotation.x=-swing*.65;avatarParts.armRight.rotation.x=swing*.65;
+ }
  updateMatchPhase(dt);
  updateZone(dt);
  const heading=((cameraYaw*180/Math.PI)%360+360)%360;
@@ -670,8 +718,11 @@ function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,(now-
  // O personagem acompanha player diretamente.
  const target=driving?car.position:player.position;const angle=driving?yaw:cameraYaw;
  const desired=new THREE.Vector3(target.x+Math.sin(angle)*14,8.2,target.z+Math.cos(angle)*14);
- camera.position.lerp(desired,.24);camera.lookAt(target.x,1.1,target.z);
- drawMinimap();renderer.render(scene,camera);
+ camera.position.lerp(desired,1-Math.exp(-9*dt));camera.lookAt(target.x,1.1,target.z);
+ minimapClock+=dt;if(minimapClock>=.12){drawMinimap();minimapClock=0;}
+ renderer.render(scene,camera);
+ if(!hasRenderedFirstFrame){hasRenderedFirstFrame=true;status.textContent='Mundo 3D iniciado • carregando personagem...';}
+
 }window.dispatchEvent(new Event('openworld:3d-ready'));requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 if(!characterReady)status.textContent='Carregando personagem 3D...';
