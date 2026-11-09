@@ -282,6 +282,18 @@ func _label(txt: String, position: Vector2, font_size: int, color: Color) -> Lab
 	hud.add_child(label)
 	return label
 
+func take_damage(amount: float) -> void:
+	if phase != Phase.PLAYING:
+		return
+	var remaining := maxf(amount, 0.0)
+	var absorbed := minf(shield, remaining)
+	shield -= absorbed
+	remaining -= absorbed
+	health = maxf(0.0, health - remaining)
+	_refresh_hud()
+	if health <= 0.0:
+		_set_phase(Phase.FINISHED)
+
 func _use_medkit() -> void:
 	if int(supplies["med"]) > 0 and health < 100.0:
 		supplies["med"] -= 1
