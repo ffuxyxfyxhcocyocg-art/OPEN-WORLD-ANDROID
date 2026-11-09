@@ -21,6 +21,9 @@ func _ready() -> void:
 	material.albedo_color = Color(0.12, 0.32, 0.82)
 	body_mesh.material_override = material
 	add_child(body_mesh)
+	# Use the Midas GLB bundled at build time; preserve its imported orientation.
+	# Never rotate it blindly: the source node already has a -90 degree transform.
+	_try_load_character_model(body_mesh)
 
 	var collision := CollisionShape3D.new()
 	var shape := CapsuleShape3D.new()
@@ -82,3 +85,47 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
 		camera_yaw -= event.relative.x * 0.006
 		camera_pitch = clampf(camera_pitch - event.relative.y * 0.004, -0.65, 0.20)
+
+func _try_load_character_model(fallback_mesh: MeshInstance3D) -> void:
+	var asset_path := "res://models/midas.glb"
+	if not ResourceLoader.exists(asset_path):
+		return
+	var asset := load(asset_path)
+	if not (asset is PackedScene):
+		return
+	var visual := (asset as PackedScene).instantiate() as Node3D
+	if visual == null:
+		return
+	visual.name = "Midas3D"
+	add_child(visual)
+	visual.rotation = Vector3.ZERO
+	visual.scale = Vector3.ONE
+	visual.force_update_transform()
+	var mesh_nodes := visual.find_children("*", "MeshInstance3D", true, false)
+	if mesh_nodes.is_empty():
+		visual.queue_free()
+		return
+	var all_bounds := AABB()
+	var first_mesh := true
+	var visual_inverse := visual.global_transform.affine_inverse()
+	for item in mesh_nodes:
+		var part := item as MeshInstance3D
+		if part == null or part.mesh == null:
+			continue
+		var local_bounds := (visual_inverse * part.global_transform) * part.get_aabb()
+		if first_mesh:
+			all_bounds = local_bounds
+			first_mesh = false
+		else:
+			all_bounds = all_bounds.merge(local_bounds)
+	if first_mesh or all_bounds.size.y < 0.05 or all_bounds.size.y > 100000.0:
+		visual.queue_free()
+		return
+	var factor := 1.8 / all_bounds.size.y
+	visual.scale = Vector3.ONE * factor
+	visual.position = Vector3(
+		-all_bounds.get_center().x * factor,
+		-all_bounds.position.y * factor,
+		-all_bounds.get_center().z * factor
+	)
+	fallback_mesh.visible = false
