@@ -298,7 +298,7 @@ func _tracer(origin: Vector3, to: Vector3) -> void:
 	)
 
 func _reload() -> void:
-	var max_clip := [24, 12, 7][weapon_slot]
+	var max_clip: int = [24, 12, 7][weapon_slot]
 	var missing: int = max_clip - clips[weapon_slot]
 	var amount: int = mini(missing, ammo)
 	clips[weapon_slot] += amount
