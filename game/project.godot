@@ -3,6 +3,7 @@ config_version=5
 
 [application]
 config/name="SR Battle Royale ZERO"
+config/icon="res://icon.svg"
 run/main_scene="res://scenes/main.tscn"
 
 [display]
@@ -15,6 +16,7 @@ window/stretch/mode="canvas_items"
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 environment/defaults/default_clear_color=Color(0.48, 0.69, 0.85, 1.0)
+textures/vram_compression/import_etc2_astc=true
 
 [physics]
 3d/default_gravity=9.8

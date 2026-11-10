@@ -27,7 +27,7 @@ jobs:
         run: |
           SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort | tail -n 1)"
           yes | "$SDKMANAGER" --licenses
-          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0" "cmdline-tools;latest" "ndk;27.2.12479018"
+          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0" "cmdline-tools;latest" "ndk;27.2.12479018" "cmake;3.10.2.4988404"
       - name: Download Godot 4.4.1 and export templates
         run: |
           mkdir -p "$HOME/.local/share/godot/export_templates/4.4.1.stable"
@@ -65,7 +65,7 @@ jobs:
       - name: Build Android APK
         run: |
           mkdir -p game/build
-          GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android/debug.keystore" GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey" GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android" /tmp/godot-bin/Godot_v4.4.1-stable_linux.x86_64 --headless --path game --export-debug "Android" build/SR-BattleRoyale-Zero.apk
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android/debug.keystore" GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey" GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android" /tmp/godot-bin/Godot_v4.4.1-stable_linux.x86_64 --headless --verbose --path game --export-debug "Android" build/SR-BattleRoyale-Zero.apk
           test -s game/build/SR-BattleRoyale-Zero.apk
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
