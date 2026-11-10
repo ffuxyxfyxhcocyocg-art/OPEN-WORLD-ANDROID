@@ -1,24 +1,27 @@
-# OPEN WORLD — Android
+# SR Battle Royale ZERO — Android
 
-Projeto Android nativo em Java + OpenGL ES 2.0. Não usa HTML nem engine externa.
+## Nova base limpa
 
-## Primeira base
-- Aplicativo Android em orientação paisagem.
-- Cena 3D renderizada por OpenGL ES.
-- Cidade procedural inicial para validar câmera, escala e desempenho.
-- Controles de toque: lado esquerdo movimenta; lado direito gira a câmera.
-- Verificador de conteúdo remoto.
+Este projeto foi criado como uma **reconstrução independente**, começando de zero, inspirada pelo mod [Iswenzz/SR-BattleRoyale](https://github.com/Iswenzz/SR-BattleRoyale) (GPL-3.0). Não é a branch do Open World BR, não usa os arquivos nem o HTML do aplicativo anterior.
 
-## Atualizações sem reinstalar o APK
-O app consulta `content/manifest.json` no branch `main`. Se a versão remota for maior, baixa `content/world.json` para a pasta privada do aplicativo. Assim podemos atualizar configurações e conteúdo remoto sem reinstalar o APK.
+Motor: Godot 4.4.1. Android arm64, modo horizontal, controles de toque.
 
-**Limite importante:** isso atualiza conteúdo e dados compatíveis. Alterações no código Java, bibliotecas, renderizador ou permissões exigem uma nova compilação/instalação do APK. O app não executa código nativo baixado do servidor.
+## Primeira etapa
 
-## Abrir
-Abra a pasta no Android Studio. Instale Android SDK 35, JDK 17, Android Gradle Plugin e sincronize o Gradle. Execute no aparelho Android com OpenGL ES 2.0.
+- Terreno 3D novo com ilha, praia, mar, estradas, prédios, árvores e pontos de referência.
+- Personagem 3D feito do zero com câmera em terceira pessoa e joystick.
+- Partida com espera, avião, salto com queda lenta, sobrevivência e zona que diminui.
+- Coleta de caixas, cura, escudo, três slots de pulso arcade, drones de treino e HUD.
+- Servidor de sala local via ENet para testes na mesma rede Wi-Fi (sem servidor público).
 
-## Estrutura
-- `app/src/main/java/com/openworld/game/MainActivity.java`: Activity e entrada de toque.
-- `GameRenderer.java`: renderização 3D OpenGL ES.
-- `ContentUpdater.java`: consulta de versão e download seguro de dados.
-- `content/manifest.json` e `content/world.json`: conteúdo remoto.
+## Limitações explícitas
+
+O repositório SR-BattleRoyale é um **mod de Call of Duty 4**; seus scripts GSC e recursos não funcionam diretamente no Android. A malha do mapa original MP_BR_BLACKOUT não está presente como GLB/FBX/OBJ compatível no repositório original. Nenhum modelo, textura ou áudio proprietário de CoD4 foi incluído. A conversão exata do mapa, a jogabilidade completa e partidas online abertas NÃO estão concluídas.
+
+## Compilação
+
+GitHub Actions, branch **sr-battleroyale-do-zero** → workflow **SR Zero Android** → APK **SR-BattleRoyale-Zero.apk**. Pode abrir \`game/\` no Godot 4.4.1 no PC. O APK é independente, com package \`com.srbattleroyale.zero\`.
+
+## Créditos
+
+Referência dos conceitos: SR-BattleRoyale (Iswenzz e colaboradores), sob licença GPL-3.0. Código Android original em GDScript; sem reutilizar seus arquivos de jogos ou modelos de CoD4.
