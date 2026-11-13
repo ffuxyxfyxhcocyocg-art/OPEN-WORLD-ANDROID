@@ -1,0 +1,42 @@
+name: Native Godot Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'godot/**'
+      - '.github/workflows/native-godot-android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Godot 4.4.1
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4.1
+          use-dotnet: false
+          include-templates: true
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install Android build tools
+        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "cmdline-tools;latest"
+      - name: Configure Android environment
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
+      - name: Validate Godot project
+        run: godot --headless --path godot --editor --quit
+      - name: Export native Android APK
+        run: godot --headless --path godot --export-debug "Android" open-world-native-debug.apk
+      - name: Upload native APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: OPEN-WORLD-BR-NATIVE-3D-APK
+          path: open-world-native-debug.apk
+          if-no-files-found: error
