@@ -4,7 +4,7 @@ config_version=5
 config/name="OPEN WORLD BR"
 run/main_scene="res://scenes/world.tscn"
 config/features=PackedStringArray("4.4", "GL Compatibility")
-config/description="OPEN WORLD BR - jogo 3D nativo para Android"
+config/description="VMS City - mundo aberto 3D nativo para Android"
 
 [display]
 window/size/viewport_width=1280
