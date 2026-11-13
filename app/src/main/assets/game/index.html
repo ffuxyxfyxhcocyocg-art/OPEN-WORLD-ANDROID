@@ -104,9 +104,39 @@
 #nub{background:#dceaf1bd}
 #status{z-index:22;bottom:6px;max-width:76vw;text-align:center;pointer-events:none;font-size:12px;background:#10202deb;border-radius:8px}
 @media(max-width:700px){#minimap-wrap{width:112px;height:112px}#match-info{top:123px;width:112px;font-size:11px}#compass{top:3px}#zone-warning{top:45px;font-size:9px}#weapon-slots{bottom:29px}.weapon-slot{width:60px;height:43px;font-size:9px}#vitals{width:42vw}#status{font-size:10px}}
+
+/* HUD mobile landscape: layout limpo, sem sobreposições */
+@media (orientation:landscape) and (max-height:520px) {
+  #minimap-wrap{top:8px!important;left:8px!important;width:104px!important;height:104px!important;border-radius:12px!important}
+  #match-info{top:120px!important;left:8px!important;width:104px!important;font-size:10px!important}
+  #match-info>div{padding:3px 1px!important;font-size:10px!important}
+  #match-info #phase-state,#match-info #phase-clock{font-size:8px!important;padding:4px 2px!important}
+  #compass{top:7px!important;left:50%!important;width: min(330px,38vw)!important;height:36px!important}
+  #compass-readout{font-size:12px!important}
+  #compass .compass-line{font-size:8px!important;letter-spacing:1px!important}
+  #zone-warning{top:49px!important;left:50%!important;font-size:9px!important;padding:4px 8px!important}
+  #build-tag{top:7px!important;right:8px!important;font-size:9px!important;padding:5px 8px!important}
+  #loot-indicator{top:39px!important;right:8px!important;font-size:9px!important;padding:5px 8px!important}
+  #midas-indicator{top:69px!important;right:8px!important;max-width:170px!important;font-size:8px!important;padding:4px 7px!important}
+  #vitals{left:50%!important;bottom:7px!important;top:auto!important;transform:translateX(-50%)!important;width:250px!important;padding:5px 9px!important;z-index:6!important}
+  #vitals>div{display:block!important;width:100%!important;font-size:9px!important}
+  .bar{height:6px!important;margin:2px 0 4px!important}
+  #weapon-slots{left:50%!important;right:auto!important;bottom:91px!important;top:auto!important;transform:translateX(-50%)!important;gap:5px!important;z-index:8!important}
+  .weapon-slot{width:66px!important;height:39px!important;font-size:9px!important}
+  #ammo{left:50%!important;right:auto!important;bottom:136px!important;transform:translateX(-50%)!important;padding:4px 8px!important;font-size:10px!important}
+  #combat-actions{right:12px!important;bottom:100px!important;flex-direction:row!important;gap:7px!important;z-index:8!important}
+  #fire{width:58px!important;height:58px!important;font-size:10px!important}
+  #reload{width:48px!important;height:42px!important;font-size:8px!important}
+  #stick{left:12px!important;bottom:12px!important;width:108px!important;height:108px!important}
+  #nub{left:32px!important;top:32px!important;width:40px!important;height:40px!important}
+  #jump{right:18px!important;bottom:20px!important;width:48px!important;height:48px!important;font-size:9px!important}
+  #vehicle{right:76px!important;left:auto!important;bottom:20px!important;width:48px!important;height:48px!important;font-size:8px!important}
+  #status{bottom:6px!important;left:50%!important;max-width:38vw!important;font-size:9px!important;padding:5px 8px!important}
+}
+
 </style>
 </head>
-<body><div id="game"></div><div id="top">OPEN WORLD • ANDROID</div><div id="build-tag">OPEN WORLD BR · v50</div><div id="loot-indicator">SUPRIMENTOS · CARREGANDO</div><div id="midas-indicator">MIDAS · AGUARDANDO</div><div id="status">Carregando mundo 3D v50...</div>
+<body><div id="game"></div><div id="top">OPEN WORLD • ANDROID</div><div id="build-tag">OPEN WORLD BR · v51</div><div id="loot-indicator">SUPRIMENTOS · CARREGANDO</div><div id="midas-indicator">MIDAS · AGUARDANDO</div><div id="status">Carregando mundo 3D v51...</div>
 <div id="combat-hud"><div id="match-info"><div><b>ALIVE</b> <strong>1</strong> <span>KILLED</span> <strong>0</strong></div><small id="phase-state">● LOBBY • AGUARDANDO PARTIDA</small><small id="phase-clock">PARTIDA COMEÇA EM 00:12</small></div><div id="compass"><span id="compass-readout">N 000°</span><div class="compass-line">W　NW　N　NE　E　SE　S　SW</div></div><div id="zone-warning">⚠ A ZONA SEGURA VAI DIMINUIR</div><div id="minimap-wrap"><canvas id="minimap" width="232" height="232"></canvas></div><div id="vitals"><div style="font-size:10px">VIDA <span id="health-num">100</span></div><div class="bar"><i id="health-fill"></i></div><div style="font-size:10px">ESCUDO <span id="shield-num">100</span></div><div class="bar"><i id="shield-fill"></i></div></div><div id="weapon-slots"><button class="weapon-slot active" data-slot="0">1 • AR</button><button class="weapon-slot" data-slot="1">2 • PIST</button><button class="weapon-slot" data-slot="2">3 • GRAN</button></div><div id="ammo">30 / 120</div><div id="combat-actions"><button id="reload">RECARREGAR</button><button id="fire">ATIRAR</button></div><div id="combat-toast">ARMA SELECIONADA</div></div>\n<div id="full-map" aria-label="Mapa da ilha"><button id="full-map-close">FECHAR MAPA ✕</button><div id="full-map-title">OPEN WORLD BR · MAPA DA ILHA</div><canvas id="full-map-canvas" width="720" height="720"></canvas><div id="full-map-note">Amarelo: jogador · Verde/azul: suprimentos · Círculo: zona segura</div></div>
 <div id="controls"><div id="look" aria-label="Arraste para girar a câmera"></div><div id="stick"><div id="nub"></div></div><div id="hint">ESQUERDA: MOVER • DIREITA: GIRAR CÂMERA</div><button class="btn" id="jump">PULAR</button><button class="btn" id="vehicle">ENTRAR</button></div>
 <!-- Compatibilidade com cópias antigas do script que ainda consultam spots. -->
