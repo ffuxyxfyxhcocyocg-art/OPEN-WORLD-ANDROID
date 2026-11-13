@@ -10,6 +10,7 @@ var trees := []
 func _ready() -> void:
     _make_environment()
     _make_world()
+    _add_mansion()
     _make_player()
     _make_camera()
     _make_hud()
@@ -166,3 +167,8 @@ class VirtualJoystick:
     func _draw() -> void:
         draw_circle(size / 2.0, 72.0, Color(0.05,0.08,0.12,0.35))
         draw_circle(size / 2.0 + vector * 48.0, 27.0, Color(0.8,0.9,1.0,0.85))
+
+func _add_mansion() -> void:
+    var mansion_scene := load("res://scenes/mansion.tscn")
+    if mansion_scene:
+        add_child(mansion_scene.instantiate())
