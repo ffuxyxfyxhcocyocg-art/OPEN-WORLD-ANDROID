@@ -12,6 +12,10 @@ func _ready() -> void:
     var updater = preload("res://scripts/remote_updater.gd").new()
     add_child(updater)
     remote_settings = await updater.fetch_config()
+    var pack_updated: bool = await updater.fetch_game_pack()
+    if pack_updated:
+        get_tree().call_deferred("reload_current_scene")
+        return
     _make_environment()
     _make_world()
     _make_road_details()
