@@ -11,6 +11,7 @@ const STONE := Color(0.48, 0.48, 0.45)
 func _ready() -> void:
     _build_house()
     _build_garden()
+    _build_finishing_details()
 
 func _material(color: Color, roughness := 0.8, metallic := 0.0) -> StandardMaterial3D:
     var m := StandardMaterial3D.new()
@@ -44,7 +45,7 @@ func _build_house() -> void:
     # Terreno da mansao; frente voltada para Z negativo.
     var house := Node3D.new()
     house.name = "Mansao_Exploravel"
-    house.position = Vector3(38, 0, -38)
+    house.position = Vector3(40, 0, 52)
     add_child(house)
 
     # Piso principal e teto/terraço.
@@ -133,3 +134,62 @@ func _build_garden() -> void:
         for z in [-1.5,0.5]:
             var wheel := _box(garden, Vector3(0.35,0.55,0.35), Vector3(x,0.45,z), DARK, false)
             wheel.rotation_degrees.z = 90
+
+func _build_finishing_details() -> void:
+    var house := get_node_or_null("Mansao_Exploravel")
+    var garden := get_node_or_null("Jardim_Piscina_Garagem")
+    if house == null or garden == null:
+        return
+
+    # Revestimento externo em pedra clara e faixas de acabamento.
+    for x in [-9.8, -6.0, 6.0, 9.8]:
+        _box(house, Vector3(0.22, 3.05, 0.42), Vector3(x, 1.62, -7.65), Color(0.55,0.53,0.49), false)
+    _box(house, Vector3(21.8, 0.16, 0.42), Vector3(0, 3.12, -7.65), Color(0.28,0.29,0.30), false)
+    _box(house, Vector3(21.8, 0.16, 0.42), Vector3(0, 0.30, -7.65), Color(0.28,0.29,0.30), false)
+    # Piso de porcelanato claro em placas.
+    for x in range(-9, 10, 2):
+        for z in range(-6, 7, 2):
+            _box(house, Vector3(1.92, 0.035, 1.92), Vector3(float(x), 0.20, float(z)), Color(0.82,0.81,0.77), false)
+    # Painel ripado de madeira na sala e detalhes da cozinha.
+    for i in range(13):
+        _box(house, Vector3(0.09, 2.35, 0.10), Vector3(4.9 + i*0.22, 1.55, 6.95), WOOD, false)
+    for x in [-8.7, -5.3]:
+        _box(house, Vector3(0.12, 0.9, 0.12), Vector3(x, 1.65, 0.45), Color(0.68,0.67,0.62), false)
+    # Iluminacao quente no teto e na fachada.
+    for x in [-7.0, -1.0, 5.0, 9.0]:
+        var lamp := OmniLight3D.new()
+        lamp.position = Vector3(x, 2.85, 0.0)
+        lamp.light_color = Color(1.0, 0.82, 0.62)
+        lamp.light_energy = 0.65
+        lamp.omni_range = 5.0
+        house.add_child(lamp)
+    for x in [-8.0, 0.0, 8.0]:
+        var facade_light := OmniLight3D.new()
+        facade_light.position = Vector3(x, 2.65, -8.4)
+        facade_light.light_color = Color(1.0, 0.84, 0.66)
+        facade_light.light_energy = 0.45
+        facade_light.omni_range = 4.0
+        house.add_child(facade_light)
+    # Ripas do deck e borda de pedra ao redor da piscina.
+    for i in range(18):
+        _box(garden, Vector3(0.12, 0.035, 9.6), Vector3(-11.0 + i*1.55, 0.16, -14.0), Color(0.43,0.27,0.16), false)
+    _box(garden, Vector3(11.5, 0.24, 0.32), Vector3(-1.0, 0.13, -17.0), WHITE, false)
+    _box(garden, Vector3(11.5, 0.24, 0.32), Vector3(-1.0, 0.13, -11.0), WHITE, false)
+    _box(garden, Vector3(0.32, 0.24, 6.0), Vector3(-6.75, 0.13, -14.0), WHITE, false)
+    _box(garden, Vector3(0.32, 0.24, 6.0), Vector3(4.75, 0.13, -14.0), WHITE, false)
+    # Espreguicadeiras e vasos decorativos.
+    for x in [-9.0, 7.0]:
+        _box(garden, Vector3(2.0, 0.18, 0.75), Vector3(x, 0.38, -19.0), Color(0.88,0.86,0.80), false)
+        _box(garden, Vector3(0.65, 0.8, 0.65), Vector3(x-2.0, 0.4, -11.0), Color(0.35,0.22,0.14), false)
+        var shrub := MeshInstance3D.new()
+        var shrub_mesh := SphereMesh.new()
+        shrub_mesh.radius = 0.65
+        shrub_mesh.height = 1.2
+        shrub.mesh = shrub_mesh
+        shrub.position = Vector3(x-2.0, 1.1, -11.0)
+        shrub.material_override = _material(Color(0.08,0.30,0.12))
+        garden.add_child(shrub)
+    # Guarda-corpo de vidro na varanda superior.
+    for i in range(9):
+        _box(house, Vector3(1.35, 0.92, 0.08), Vector3(-5.0 + i*1.5, 4.55, -4.45), GLASS, false)
+    _box(house, Vector3(14.0, 0.10, 0.18), Vector3(1.0, 5.05, -4.45), DARK, false)
