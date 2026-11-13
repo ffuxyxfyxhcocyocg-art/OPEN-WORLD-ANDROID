@@ -10,6 +10,7 @@ var trees := []
 func _ready() -> void:
     _make_environment()
     _make_world()
+    _make_road_details()
     _add_mansion()
     _make_player()
     _make_camera()
@@ -91,20 +92,68 @@ func _tree(p: Vector3) -> void:
     crown.material_override = _mat(Color(0.06, randf_range(0.28, 0.42), 0.12))
     add_child(crown)
 
+func _make_road_details() -> void:
+    var sidewalk := Color(0.56, 0.57, 0.54)
+    var paint := Color(0.92, 0.88, 0.68)
+    _box(self, Vector3(3.0, 0.18, 180), Vector3(-8.5, 0.02, 0), sidewalk)
+    _box(self, Vector3(3.0, 0.18, 180), Vector3(8.5, 0.02, 0), sidewalk)
+    _box(self, Vector3(180, 0.18, 3.0), Vector3(0, 0.03, -8.5), sidewalk)
+    _box(self, Vector3(180, 0.18, 3.0), Vector3(0, 0.03, 8.5), sidewalk)
+    for i in range(-8, 9):
+        var offset := float(i) * 10.0
+        _box(self, Vector3(0.18, 0.025, 5.0), Vector3(offset, 0.075, 0), paint)
+        _box(self, Vector3(5.0, 0.025, 0.18), Vector3(0, 0.075, offset), paint)
+    for side in [-1.0, 1.0]:
+        for z in [-24.0, 24.0]:
+            _box(self, Vector3(0.16, 5.2, 0.16), Vector3(side * 11.0, 2.6, z), Color(0.12, 0.14, 0.16))
+            _box(self, Vector3(1.0, 0.18, 0.42), Vector3(side * 11.0, 5.25, z), Color(0.95, 0.82, 0.58))
+
+func _character_piece(parent: Node3D, mesh: PrimitiveMesh, pos: Vector3, color: Color) -> MeshInstance3D:
+    var part := MeshInstance3D.new()
+    part.mesh = mesh
+    part.position = pos
+    part.material_override = _mat(color)
+    parent.add_child(part)
+    return part
+
 func _make_player() -> void:
     player = CharacterBody3D.new()
     player.name = "Player"
     player.position = Vector3(0, 1, 0)
-    var body := MeshInstance3D.new()
-    var capsule := CapsuleMesh.new()
-    capsule.radius = 0.48
-    capsule.height = 1.8
-    body.mesh = capsule
-    body.material_override = _mat(Color(0.08, 0.16, 0.22))
-    player.add_child(body)
+    var visual := Node3D.new()
+    visual.name = "CharacterVisual"
+    player.add_child(visual)
+    var skin := Color(0.66, 0.43, 0.29)
+    var shirt := Color(0.10, 0.28, 0.58)
+    var pants := Color(0.09, 0.12, 0.18)
+    var shoes := Color(0.045, 0.05, 0.06)
+    var torso := BoxMesh.new()
+    torso.size = Vector3(0.78, 0.82, 0.42)
+    _character_piece(visual, torso, Vector3(0, 0.95, 0), shirt)
+    var head := SphereMesh.new()
+    head.radius = 0.25
+    head.height = 0.5
+    _character_piece(visual, head, Vector3(0, 1.58, 0), skin)
+    var hair := SphereMesh.new()
+    hair.radius = 0.255
+    hair.height = 0.22
+    _character_piece(visual, hair, Vector3(0, 1.76, 0), Color(0.08, 0.055, 0.04))
+    for side in [-1.0, 1.0]:
+        var arm := CapsuleMesh.new()
+        arm.radius = 0.12
+        arm.height = 0.72
+        var arm_node := _character_piece(visual, arm, Vector3(side * 0.51, 0.98, 0), skin)
+        arm_node.rotation_degrees.z = side * -10.0
+        var leg := CapsuleMesh.new()
+        leg.radius = 0.15
+        leg.height = 0.78
+        _character_piece(visual, leg, Vector3(side * 0.20, 0.38, 0), pants)
+        var shoe := BoxMesh.new()
+        shoe.size = Vector3(0.30, 0.16, 0.42)
+        _character_piece(visual, shoe, Vector3(side * 0.20, 0.08, -0.08), shoes)
     var shape := CollisionShape3D.new()
     var cs := CapsuleShape3D.new()
-    cs.radius = 0.48
+    cs.radius = 0.38
     cs.height = 1.8
     shape.shape = cs
     player.add_child(shape)
