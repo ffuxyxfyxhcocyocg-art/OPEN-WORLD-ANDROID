@@ -9,13 +9,19 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: vms-city-native-build
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
       - name: Setup Godot 4.4.1
         uses: chickensoft-games/setup-godot@v2
         with:
@@ -60,15 +66,43 @@ jobs:
       - name: Validate Godot project
         run: godot --headless --path godot --editor --quit
       - name: Export native Android APK
-        run: godot --headless --path godot --export-debug "Android" open-world-native-debug.apk --verbose
-      - name: Verify APK
+        run: godot --headless --path godot --export-debug "Android" "$GITHUB_WORKSPACE/open-world-native-debug.apk" --verbose
+      - name: Export remote game update pack
+        run: godot --headless --path godot --export-pack "Android" "$GITHUB_WORKSPACE/game-update.pck"
+      - name: Verify exports
         run: |
-          test -s godot/open-world-native-debug.apk
-          file godot/open-world-native-debug.apk
-          unzip -t godot/open-world-native-debug.apk
+          test -s "$GITHUB_WORKSPACE/open-world-native-debug.apk"
+          test -s "$GITHUB_WORKSPACE/game-update.pck"
+          unzip -t "$GITHUB_WORKSPACE/open-world-native-debug.apk"
+          sha256sum "$GITHUB_WORKSPACE/game-update.pck"
+      - name: Publish live game update pack
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view vms-city-live --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload vms-city-live "$GITHUB_WORKSPACE/game-update.pck" --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create vms-city-live "$GITHUB_WORKSPACE/game-update.pck" --title "VMS City live update" --notes "Pacote remoto de atualização do VMS City." --repo "$GITHUB_REPOSITORY"
+          fi
+      - name: Publish update manifest
+        run: |
+          VERSION="$GITHUB_RUN_NUMBER"
+          SHA="$(sha256sum "$GITHUB_WORKSPACE/game-update.pck" | awk '{print $1}')"
+          cat > updates/manifest.json <<EOF
+          {
+            "version": $VERSION,
+            "pck_url": "https://github.com/$GITHUB_REPOSITORY/releases/download/vms-city-live/game-update.pck",
+            "sha256": "$SHA"
+          }
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add updates/manifest.json
+          git commit -m "Publish VMS City live update v$VERSION"
+          git push origin HEAD:main
       - name: Upload native APK
         uses: actions/upload-artifact@v4
         with:
-          name: OPEN-WORLD-BR-NATIVE-3D-APK
-          path: godot/open-world-native-debug.apk
+          name: VMS-CITY-NATIVE-ANDROID-APK
+          path: open-world-native-debug.apk
           if-no-files-found: error
