@@ -63,12 +63,12 @@ jobs:
         run: godot --headless --path godot --export-debug "Android" open-world-native-debug.apk --verbose
       - name: Verify APK
         run: |
-          test -s open-world-native-debug.apk
-          file open-world-native-debug.apk
-          unzip -t open-world-native-debug.apk
+          test -s godot/open-world-native-debug.apk
+          file godot/open-world-native-debug.apk
+          unzip -t godot/open-world-native-debug.apk
       - name: Upload native APK
         uses: actions/upload-artifact@v4
         with:
           name: OPEN-WORLD-BR-NATIVE-3D-APK
-          path: open-world-native-debug.apk
+          path: godot/open-world-native-debug.apk
           if-no-files-found: error
