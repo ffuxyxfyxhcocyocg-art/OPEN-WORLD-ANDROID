@@ -46,6 +46,14 @@ func _box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) -> MeshInst
     n.position = pos
     n.material_override = _mat(color)
     parent.add_child(n)
+    var body := StaticBody3D.new()
+    body.position = pos
+    var collision := CollisionShape3D.new()
+    var shape := BoxShape3D.new()
+    shape.size = size
+    collision.shape = shape
+    body.add_child(collision)
+    parent.add_child(body)
     return n
 
 func _make_world() -> void:
