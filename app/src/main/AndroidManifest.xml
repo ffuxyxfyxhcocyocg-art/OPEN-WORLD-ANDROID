@@ -2,7 +2,7 @@
     <uses-feature android:glEsVersion="0x00020000" android:required="true"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <application android:theme="@android:style/Theme.Material.Light.NoActionBar"
-        android:label="VMS RUN" android:usesCleartextTraffic="false">
+        android:label="OPEN WORLD BR" android:usesCleartextTraffic="false">
         <activity android:name=".MainActivity" android:screenOrientation="landscape"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:exported="true">
