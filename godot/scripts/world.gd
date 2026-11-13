@@ -82,7 +82,7 @@ func _tree(p: Vector3) -> void:
     trunk.material_override = _mat(Color(0.28, 0.16, 0.08))
     add_child(trunk)
     var crown := MeshInstance3D.new()
-    var cm := ConeMesh.new()
+    var cm := CylinderMesh.new()
     cm.top_radius = 0.0
     cm.bottom_radius = 1.55
     cm.height = 3.4
