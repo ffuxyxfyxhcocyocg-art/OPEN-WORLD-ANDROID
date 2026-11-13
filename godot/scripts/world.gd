@@ -6,8 +6,12 @@ var camera: Camera3D
 var hud: CanvasLayer
 var move_pad: VirtualJoystick
 var trees := []
+var remote_settings: Dictionary = {}
 
 func _ready() -> void:
+    var updater = preload("res://scripts/remote_updater.gd").new()
+    add_child(updater)
+    remote_settings = await updater.fetch_config()
     _make_environment()
     _make_world()
     _make_road_details()
@@ -60,15 +64,17 @@ func _make_world() -> void:
     _box(self, Vector3(180, 0.3, 180), Vector3(0, -0.2, 0), Color(0.28, 0.48, 0.22))
     _box(self, Vector3(14, 0.12, 180), Vector3(0, 0, 0), Color(0.16, 0.17, 0.19))
     _box(self, Vector3(180, 0.12, 14), Vector3(0, 0.01, 0), Color(0.16, 0.17, 0.19))
-    for i in range(-4, 5):
+    var radius := int(remote_settings.get("grid_radius", 4))
+    var spacing := float(remote_settings.get("block_spacing", 19.0))
+    for i in range(-radius, radius + 1):
         if i == 0:
             continue
-        _building(Vector3(float(i) * 19.0, 0, -22.0))
-        _building(Vector3(float(i) * 19.0, 0, 25.0))
-    for x in range(-8, 9):
+        _building(Vector3(float(i) * spacing, 0, -22.0))
+        _building(Vector3(float(i) * spacing, 0, 25.0))
+    for x in range(-radius * 2, radius * 2 + 1):
         for z in [-7, 7]:
             _tree(Vector3(float(x) * 9.0 + 4.0, 0, float(z) * 2.2))
-    for z in range(-8, 9):
+    for z in range(-radius * 2, radius * 2 + 1):
         for x in [-8, 8]:
             _tree(Vector3(float(x) * 2.1, 0, float(z) * 9.0 + 3.0))
 
@@ -177,7 +183,9 @@ func _make_camera() -> void:
 
 func _process(delta: float) -> void:
     if player and camera:
-        var target := player.global_position + Vector3(0, 6.5, 10.5)
+        var camera_height := float(remote_settings.get("camera_height", 6.5))
+        var camera_distance := float(remote_settings.get("camera_distance", 10.5))
+        var target := player.global_position + Vector3(0, camera_height, camera_distance)
         camera.global_position = camera.global_position.lerp(target, min(delta * 5.0, 1.0))
         camera.look_at(player.global_position + Vector3(0, 1.0, 0), Vector3.UP)
 
