@@ -16,7 +16,8 @@ func fetch_config() -> Dictionary:
     manifest_request.queue_free()
     if manifest_result[0] != HTTPRequest.RESULT_SUCCESS or manifest_result[1] != 200:
         return cached
-    var manifest_text := (manifest_result[3] as PackedByteArray).get_string_from_utf8()
+    var manifest_bytes: PackedByteArray = manifest_result[3]
+    var manifest_text := manifest_bytes.get_string_from_utf8()
     var manifest = JSON.parse_string(manifest_text)
     if not manifest is Dictionary:
         return cached
