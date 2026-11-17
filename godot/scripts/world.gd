@@ -8,6 +8,10 @@ var move_pad
 var trees := []
 var remote_settings: Dictionary = {}
 var update_status: Label
+var camera_yaw: float = 0.0
+var camera_dragging: bool = false
+var camera_touch_index: int = -1
+var camera_sensitivity: float = 0.008
 
 func _ready() -> void:
     # Primeiro use a última configuração salva: o mundo abre mesmo sem internet.
@@ -274,9 +278,28 @@ func _process(delta: float) -> void:
     if player and camera:
         var camera_height := float(remote_settings.get("camera_height", 6.5))
         var camera_distance := float(remote_settings.get("camera_distance", 10.5))
-        var target := player.global_position + Vector3(0, camera_height, camera_distance)
-        camera.global_position = camera.global_position.lerp(target, min(delta * 5.0, 1.0))
+        var horizontal_offset := Vector3(sin(camera_yaw) * camera_distance, 0.0, cos(camera_yaw) * camera_distance)
+        var target := player.global_position + horizontal_offset + Vector3(0, camera_height, 0)
+        camera.global_position = camera.global_position.lerp(target, min(delta * 8.0, 1.0))
         camera.look_at(player.global_position + Vector3(0, 1.0, 0), Vector3.UP)
+
+# Arraste o lado direito da tela para girar a câmera em torno do personagem.
+# O lado esquerdo permanece livre para o joystick de movimento.
+func _unhandled_input(event: InputEvent) -> void:
+    var viewport_width := get_viewport_rect().size.x
+    if event is InputEventScreenTouch:
+        if event.pressed and event.position.x >= viewport_width * 0.38:
+            camera_dragging = true
+            camera_touch_index = event.index
+        elif not event.pressed and event.index == camera_touch_index:
+            camera_dragging = false
+            camera_touch_index = -1
+    elif event is InputEventScreenDrag and camera_dragging and event.index == camera_touch_index:
+        camera_yaw -= event.relative.x * camera_sensitivity
+    elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
+        camera_dragging = event.pressed
+    elif event is InputEventMouseMotion and camera_dragging and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+        camera_yaw -= event.relative.x * camera_sensitivity
 
 func _make_hud() -> void:
     hud = CanvasLayer.new()
@@ -288,7 +311,7 @@ func _make_hud() -> void:
     title.add_theme_color_override("font_color", Color.WHITE)
     hud.add_child(title)
     var help := Label.new()
-    help.text = "Use o analógico para andar"
+    help.text = "Analógico: andar  •  Arraste o lado direito: girar câmera"
     help.position = Vector2(22, 52)
     help.add_theme_font_size_override("font_size", 16)
     help.add_theme_color_override("font_color", Color.WHITE)
