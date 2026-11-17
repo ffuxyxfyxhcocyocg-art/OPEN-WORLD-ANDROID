@@ -1,4 +1,4 @@
-name: Native Godot Android APK
+name: Godot Android APK + Live Updates
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: vms-city-native-build
+  group: open-world-godot-build
   cancel-in-progress: true
 
 jobs:
@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: true
-      - name: Setup Godot 4.4.1
+      - name: Setup Godot 4.4.1 and export templates
         uses: chickensoft-games/setup-godot@v2
         with:
           version: 4.4.1
@@ -33,24 +33,15 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: platform-tools
-      - name: Install Android build tools
-        run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmdline-tools;latest" "cmake;3.10.2.4988404" "ndk;23.2.8568313"
+      - name: Install Android SDK packages
+        run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
       - name: Create Android debug keystore
         run: |
           mkdir -p "$HOME/.android"
           keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$HOME/.android/debug.keystore" >> "$GITHUB_ENV"
-          echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey" >> "$GITHUB_ENV"
-          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android" >> "$GITHUB_ENV"
-      - name: Configure Android environment
-        run: |
-          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
       - name: Configure Godot Android export paths
         run: |
           mkdir -p ~/.config/godot
@@ -63,38 +54,37 @@ jobs:
           export/android/debug_keystore_user = "androiddebugkey"
           export/android/debug_keystore_pass = "android"
           EOF
-          test -f ~/.config/godot/editor_settings-4.4.tres
-      - name: Validate Godot project
-        run: godot --headless --path godot --editor --quit
-      - name: Export native Android APK
-        run: godot --headless --path godot --export-debug "Android" "$GITHUB_WORKSPACE/open-world-native-debug.apk" --verbose
-      - name: Export remote game update pack
+      - name: Validate and import Godot project
+        run: godot --headless --editor --path godot --quit
+      - name: Export native Godot Android APK
+        run: godot --headless --path godot --export-debug "Android" "$GITHUB_WORKSPACE/OPEN-WORLD-GODOT.apk" --verbose
+      - name: Export remote Godot content pack
         run: godot --headless --path godot --export-pack "Android" "$GITHUB_WORKSPACE/game-update.pck"
-      - name: Verify exports
+      - name: Verify APK and update pack
         run: |
-          test -s "$GITHUB_WORKSPACE/open-world-native-debug.apk"
+          test -s "$GITHUB_WORKSPACE/OPEN-WORLD-GODOT.apk"
           test -s "$GITHUB_WORKSPACE/game-update.pck"
-          unzip -t "$GITHUB_WORKSPACE/open-world-native-debug.apk"
+          unzip -t "$GITHUB_WORKSPACE/OPEN-WORLD-GODOT.apk"
           sha256sum "$GITHUB_WORKSPACE/game-update.pck"
-      - name: Publish live game update pack
+      - name: Publish live content pack
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view vms-city-live --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload vms-city-live "$GITHUB_WORKSPACE/game-update.pck" --clobber --repo "$GITHUB_REPOSITORY"
           else
-            gh release create vms-city-live "$GITHUB_WORKSPACE/game-update.pck" --title "VMS City live update" --notes "Pacote remoto de atualização do VMS City." --repo "$GITHUB_REPOSITORY"
+            gh release create vms-city-live "$GITHUB_WORKSPACE/game-update.pck" --title "Open World live update" --notes "Pacote remoto do jogo Godot." --repo "$GITHUB_REPOSITORY"
           fi
-      - name: Publish update manifest
+      - name: Publish verified update manifests
         run: |
           VERSION="$GITHUB_RUN_NUMBER"
-          SHA="$(sha256sum "$GITHUB_WORKSPACE/game-update.pck" | awk '{print $1}')"
+          PACK_SHA="$(sha256sum "$GITHUB_WORKSPACE/game-update.pck" | awk '{print $1}')"
           CONFIG_SHA="$(sha256sum content/world.json | awk '{print $1}')"
           cat > updates/manifest.json <<EOF
           {
             "version": $VERSION,
             "pck_url": "https://github.com/$GITHUB_REPOSITORY/releases/download/vms-city-live/game-update.pck",
-            "sha256": "$SHA"
+            "sha256": "$PACK_SHA"
           }
           EOF
           cat > content/manifest.json <<EOF
@@ -107,11 +97,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add updates/manifest.json content/manifest.json
-          git commit -m "Publish VMS City live update v$VERSION"
-          git push origin HEAD:main
-      - name: Upload native APK
+          if ! git diff --cached --quiet; then
+            git commit -m "Publish Godot live update v$VERSION [skip ci]"
+            git push origin HEAD:main
+          fi
+      - name: Upload Android APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: VMS-CITY-NATIVE-ANDROID-APK
-          path: open-world-native-debug.apk
+          name: OPEN-WORLD-GODOT-ANDROID
+          path: OPEN-WORLD-GODOT.apk
           if-no-files-found: error

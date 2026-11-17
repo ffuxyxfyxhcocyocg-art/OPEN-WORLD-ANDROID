@@ -207,6 +207,29 @@ func _make_player() -> void:
         var shoe := BoxMesh.new()
         shoe.size = Vector3(0.30, 0.16, 0.42)
         _character_piece(visual, shoe, Vector3(side * 0.20, 0.08, -0.08), shoes)
+    # Use o Midas GLB original do projeto, mantendo o boneco procedural como fallback.
+    var midas_scene = load("res://models/midas.glb")
+    if midas_scene is PackedScene:
+        var midas_model := midas_scene.instantiate()
+        midas_model.name = "MidasModel"
+        if midas_model is Node3D:
+            midas_model.scale = Vector3.ONE
+            for old_part in visual.get_children():
+                old_part.queue_free()
+            visual.add_child(midas_model)
+            var animator := _find_animation_player(midas_model)
+            if animator:
+                var clips := animator.get_animation_list()
+                var chosen := ""
+                for clip in clips:
+                    if "idle" in clip.to_lower():
+                        chosen = clip
+                        break
+                if chosen == "" and not clips.is_empty():
+                    chosen = clips[0]
+                if chosen != "" and animator.has_animation(chosen):
+                    animator.play(chosen)
+
     var shape := CollisionShape3D.new()
     var cs := CapsuleShape3D.new()
     cs.radius = 0.38
@@ -279,3 +302,13 @@ func _add_mansion() -> void:
     var mansion_scene := load("res://scenes/mansion.tscn")
     if mansion_scene:
         add_child(mansion_scene.instantiate())
+
+
+func _find_animation_player(node: Node) -> AnimationPlayer:
+    if node is AnimationPlayer:
+        return node
+    for child in node.get_children():
+        var found := _find_animation_player(child)
+        if found:
+            return found
+    return null

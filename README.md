@@ -1,24 +1,25 @@
-# OPEN WORLD — Android
+# OPEN WORLD BR — Godot Android
 
-Projeto Android nativo em Java + OpenGL ES 2.0. Não usa HTML nem engine externa.
+O jogo Android é exportado pelo projeto Godot 4.4.1 em `godot/`. A implementação antiga baseada em Android WebView/HTML foi removida do caminho de compilação.
 
-## Primeira base
-- Aplicativo Android em orientação paisagem.
-- Cena 3D renderizada por OpenGL ES.
-- Cidade procedural inicial para validar câmera, escala e desempenho.
-- Controles de toque: lado esquerdo movimenta; lado direito gira a câmera.
-- Verificador de conteúdo remoto.
+## APK Android
+- Workflow: `.github/workflows/native-godot-android.yml`.
+- Exportação: Godot 4.4.1, Android ARM64, renderer GL Compatibility.
+- Artefato: `OPEN-WORLD-GODOT-ANDROID`.
 
-## Atualizações sem reinstalar o APK
-O app consulta `content/manifest.json` no branch `main`. Se a versão remota for maior, baixa `content/world.json` para a pasta privada do aplicativo. Assim podemos atualizar configurações e conteúdo remoto sem reinstalar o APK.
-
-**Limite importante:** isso atualiza conteúdo e dados compatíveis. Alterações no código Java, bibliotecas, renderizador ou permissões exigem uma nova compilação/instalação do APK. O app não executa código nativo baixado do servidor.
-
-## Abrir
-Abra a pasta no Android Studio. Instale Android SDK 35, JDK 17, Android Gradle Plugin e sincronize o Gradle. Execute no aparelho Android com OpenGL ES 2.0.
+## Atualização automática de conteúdo
+- `godot/scripts/remote_updater.gd` consulta os manifestos e valida SHA-256.
+- `updates/manifest.json` aponta para o pacote `.pck` publicado no GitHub Release `vms-city-live`.
+- `content/manifest.json` controla a configuração remota `content/world.json`.
+- O pacote é carregado no início do app; atualizações baixadas entram ao reiniciar a cena/jogo.
+- Cenas, modelos, texturas, sons e outros recursos compatíveis podem ser enviados no `.pck` sem reinstalar o APK.
+- Mudanças no código nativo, engine, permissões ou funcionalidades que não existam no APK ainda exigem uma nova versão do app.
 
 ## Estrutura
-- `app/src/main/java/com/openworld/game/MainActivity.java`: Activity e entrada de toque.
-- `GameRenderer.java`: renderização 3D OpenGL ES.
-- `ContentUpdater.java`: consulta de versão e download seguro de dados.
-- `content/manifest.json` e `content/world.json`: conteúdo remoto.
+- `godot/`: jogo 3D nativo Godot.
+- `godot/models/midas.glb`: personagem Midas.
+- `content/`: manifesto e configuração remota.
+- `updates/`: manifesto do pacote remoto.
+- `server/`: servidor WebSocket de multiplayer.
+
+Não existe mais WebView/HTML como motor principal do aplicativo.
