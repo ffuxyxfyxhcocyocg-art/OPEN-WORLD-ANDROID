@@ -2,6 +2,11 @@ name: Godot Android APK + Live Updates
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'godot/**'
+      - '.github/workflows/native-godot-android.yml'
 
 permissions:
   contents: write
@@ -52,6 +57,15 @@ jobs:
           EOF
       - name: Validate and import Godot project
         run: godot --headless --editor --path godot --quit
+      - name: Smoke test startup and reject script errors
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path godot --quit-after 12 2>&1 | tee godot-smoke.log
+          if grep -E 'SCRIPT ERROR|Parse Error|Failed to load script|ERROR:' godot-smoke.log; then
+            echo 'Godot startup validation failed.'
+            exit 1
+          fi
       - name: Export native Godot Android APK
         run: godot --headless --path godot --export-debug "Android" "$GITHUB_WORKSPACE/OPEN-WORLD-GODOT.apk" --verbose
       - name: Export remote Godot content pack
