@@ -204,36 +204,18 @@ func _make_player() -> void:
         arm.radius = 0.12
         arm.height = 0.72
         var arm_node := _character_piece(visual, arm, Vector3(side * 0.51, 0.98, 0), skin)
+        arm_node.name = "ArmLeft" if side < 0 else "ArmRight"
         arm_node.rotation_degrees.z = side * -10.0
         var leg := CapsuleMesh.new()
         leg.radius = 0.15
         leg.height = 0.78
-        _character_piece(visual, leg, Vector3(side * 0.20, 0.38, 0), pants)
+        var leg_node := _character_piece(visual, leg, Vector3(side * 0.20, 0.38, 0), pants)
+        leg_node.name = "LegLeft" if side < 0 else "LegRight"
         var shoe := BoxMesh.new()
         shoe.size = Vector3(0.30, 0.16, 0.42)
         _character_piece(visual, shoe, Vector3(side * 0.20, 0.08, -0.08), shoes)
-    # Use o Midas GLB original do projeto, mantendo o boneco procedural como fallback.
-    var midas_scene: PackedScene = load("res://models/midas.glb") as PackedScene
-    if midas_scene != null:
-        var midas_model: Node3D = midas_scene.instantiate() as Node3D
-        if midas_model != null:
-            midas_model.name = "MidasModel"
-            midas_model.scale = Vector3.ONE
-            for old_part in visual.get_children():
-                old_part.queue_free()
-            visual.add_child(midas_model)
-            var animator: AnimationPlayer = _find_animation_player(midas_model)
-            if animator:
-                var clips := animator.get_animation_list()
-                var chosen := ""
-                for clip in clips:
-                    if "idle" in clip.to_lower():
-                        chosen = clip
-                        break
-                if chosen == "" and not clips.is_empty():
-                    chosen = clips[0]
-                if chosen != "" and animator.has_animation(chosen):
-                    animator.play(chosen)
+    # Mantém o personagem humanoide visível como base. O GLB anterior era
+    # instanciado sem validar escala/visibilidade e apagava este modelo.
 
     var shape := CollisionShape3D.new()
     var cs := CapsuleShape3D.new()

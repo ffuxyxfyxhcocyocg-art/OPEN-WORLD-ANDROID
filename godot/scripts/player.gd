@@ -8,10 +8,19 @@ var animator: AnimationPlayer
 var idle_animation := ""
 var move_animation := ""
 var active_animation := ""
+var left_arm: Node3D
+var right_arm: Node3D
+var left_leg: Node3D
+var right_leg: Node3D
 
 func _ready() -> void:
     visual = get_node_or_null("CharacterVisual")
     animator = _find_animation_player(visual)
+    if visual:
+        left_arm = visual.get_node_or_null("ArmLeft") as Node3D
+        right_arm = visual.get_node_or_null("ArmRight") as Node3D
+        left_leg = visual.get_node_or_null("LegLeft") as Node3D
+        right_leg = visual.get_node_or_null("LegRight") as Node3D
     if animator:
         for clip in animator.get_animation_list():
             var key := str(clip).to_lower()
@@ -45,9 +54,11 @@ func _physics_process(delta: float) -> void:
     if moving:
         rotation.y = lerp_angle(rotation.y, atan2(direction.x, direction.z), min(delta * 10.0, 1.0))
         walk_clock += delta * 10.0
+        _animate_limbs()
         _play_character_animation(move_animation if move_animation != "" else idle_animation)
     else:
         walk_clock = 0.0
+        _reset_limbs()
         _play_character_animation(idle_animation)
     if visual:
         visual.position.y = abs(sin(walk_clock)) * 0.055 if moving and move_animation == "" else 0.0
@@ -56,6 +67,17 @@ func _physics_process(delta: float) -> void:
     else:
         velocity.y = 0.0
     move_and_slide()
+
+func _animate_limbs() -> void:
+    var swing := sin(walk_clock) * 0.62
+    if left_arm: left_arm.rotation.x = -swing
+    if right_arm: right_arm.rotation.x = swing
+    if left_leg: left_leg.rotation.x = swing
+    if right_leg: right_leg.rotation.x = -swing
+
+func _reset_limbs() -> void:
+    for limb in [left_arm, right_arm, left_leg, right_leg]:
+        if limb: limb.rotation.x = 0.0
 
 func _play_character_animation(animation_name: String) -> void:
     if animator == null or animation_name == "" or not animator.has_animation(animation_name):
