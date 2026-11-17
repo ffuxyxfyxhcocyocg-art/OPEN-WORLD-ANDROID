@@ -220,8 +220,8 @@ func _make_camera() -> void:
     camera = Camera3D.new()
     camera.position = Vector3(0, 7, 11)
     camera.rotation_degrees = Vector3(-22, 0, 0)
-    camera.current = true
     add_child(camera)
+    camera.make_current()
 
 func _process(delta: float) -> void:
     if player and camera:
