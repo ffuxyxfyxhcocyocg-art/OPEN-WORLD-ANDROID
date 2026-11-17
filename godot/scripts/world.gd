@@ -84,11 +84,37 @@ func _make_world() -> void:
 
 func _building(p: Vector3) -> void:
     var h := randf_range(7.0, 15.0)
-    var b := _box(self, Vector3(randf_range(8, 12), h, randf_range(8, 12)), p + Vector3(0, h / 2.0, 0), Color(randf_range(0.35,0.65), randf_range(0.35,0.58), randf_range(0.28,0.48)))
+    var width := randf_range(8.0, 12.0)
+    var depth := randf_range(8.0, 12.0)
+    var facades: Array[Color] = [
+        Color("#e7b88c"),
+        Color("#d98f83"),
+        Color("#9bb9c9"),
+        Color("#a9c5a0"),
+        Color("#d5b6d9"),
+        Color("#e6d69e"),
+        Color("#d7d0c4"),
+        Color("#91aaa8")
+    ]
+    var facade: Color = facades[randi_range(0, facades.size() - 1)]
+    var window_color := Color("#263f52")
+    var trim_color := facade.lightened(0.22)
+    var b := _box(self, Vector3(width, h, depth), p + Vector3(0, h / 2.0, 0), facade)
     b.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-    for y in range(1, int(h / 2.5)):
-        for side in [-1, 1]:
-            _box(self, Vector3(1.1, 1.0, 0.12), p + Vector3(side * 2.0, float(y) * 2.4, 5.06), Color(0.08, 0.28, 0.38))
+
+    # Moldura clara no topo para dar acabamento às fachadas.
+    _box(self, Vector3(width + 0.25, 0.28, depth + 0.25), p + Vector3(0, h - 0.12, 0), trim_color)
+
+    # Janelas alinhadas na fachada da rua.
+    var columns := max(2, int(width / 2.8))
+    var rows := max(2, int(h / 2.8))
+    for y in range(rows):
+        for x in range(columns):
+            var wx := -width / 2.0 + (float(x) + 0.5) * width / float(columns)
+            var wy := 1.5 + float(y) * 2.35
+            if wy < h - 0.8:
+                _box(self, Vector3(1.05, 1.15, 0.10), p + Vector3(wx, wy, depth / 2.0 + 0.06), window_color)
+                _box(self, Vector3(1.05, 1.15, 0.10), p + Vector3(wx, wy, -depth / 2.0 - 0.06), window_color)
 
 func _tree(p: Vector3) -> void:
     var trunk := MeshInstance3D.new()
