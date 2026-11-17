@@ -1,0 +1,58 @@
+name: Publish Godot live update only
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'godot/**'
+      - '.github/workflows/publish-live-update.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish-live-content:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4.1
+          use-dotnet: false
+          include-templates: true
+      - name: Import project
+        run: godot --headless --editor --path godot --quit
+      - name: Smoke test game startup
+        run: godot --headless --path godot --quit-after 8
+      - name: Export remote PCK only (no APK)
+        run: godot --headless --path godot --export-pack "Android" "$GITHUB_WORKSPACE/game-update.pck"
+      - name: Verify package
+        run: test -s game-update.pck && sha256sum game-update.pck
+      - name: Publish live PCK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view vms-city-live --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload vms-city-live game-update.pck --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create vms-city-live game-update.pck --title "Open World live update" --notes "Pacote remoto Godot." --repo "$GITHUB_REPOSITORY"
+          fi
+      - name: Publish manifest with checksum
+        run: |
+          VERSION="$GITHUB_RUN_NUMBER"
+          HASH="$(sha256sum game-update.pck | awk '{print $1}')"
+          cat > updates/manifest.json <<EOF
+          {
+            "version": $VERSION,
+            "pck_url": "https://github.com/$GITHUB_REPOSITORY/releases/download/vms-city-live/game-update.pck",
+            "sha256": "$HASH"
+          }
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add updates/manifest.json
+          git commit -m "Publish live game content v$VERSION [skip ci]"
+          git push origin HEAD:main

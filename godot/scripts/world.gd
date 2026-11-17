@@ -4,7 +4,7 @@ const PLAYER_SCRIPT = preload("res://scripts/player.gd")
 var player: CharacterBody3D
 var camera: Camera3D
 var hud: CanvasLayer
-var move_pad: VirtualJoystick
+var move_pad
 var trees := []
 var remote_settings: Dictionary = {}
 
@@ -27,12 +27,14 @@ func _ready() -> void:
         get_tree().call_deferred("reload_current_scene")
 
 func _build_world() -> void:
+    # Ative uma camera antes de criar os objetos; se algum conteudo falhar,
+    # o jogador ainda vera o cenario parcial em vez de apenas a cor do ceu.
     _make_environment()
+    _make_camera()
     _make_world()
     _make_road_details()
     _add_mansion()
     _make_player()
-    _make_camera()
     _make_hud()
 
 func _make_environment() -> void:
