@@ -3,6 +3,12 @@ extends Node
 const MANIFEST_URL := "https://raw.githubusercontent.com/ffuxyxfyxhcocyocg-art/OPEN-WORLD-ANDROID/main/content/manifest.json"
 const MAX_DOWNLOAD_BYTES := 8 * 1024 * 1024
 
+func load_cached_pack() -> bool:
+    var cached_pack := ProjectSettings.globalize_path("user://updates/game-update.pck")
+    if not FileAccess.file_exists("user://updates/game-update.pck"):
+        return false
+    return ProjectSettings.load_resource_pack(cached_pack, true)
+
 func get_cached_config() -> Dictionary:
     return _read_cached_config()
 
