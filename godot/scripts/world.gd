@@ -9,7 +9,24 @@ var trees := []
 var remote_settings: Dictionary = {}
 
 func _ready() -> void:
-    # Renderize o mundo primeiro; a rede nunca deve bloquear a tela inicial.
+    # Primeiro use a última configuração salva: o mundo abre mesmo sem internet.
+    var updater = preload("res://scripts/remote_updater.gd").new()
+    add_child(updater)
+    remote_settings = updater.get_cached_config()
+    _build_world()
+
+    # Verifique o GitHub em segundo plano, sem bloquear a exibição do jogo.
+    var previous_settings := remote_settings.duplicate(true)
+    var latest_settings: Dictionary = await updater.fetch_config()
+    var config_updated := latest_settings != previous_settings
+    remote_settings = latest_settings
+
+    # O pacote é validado por SHA-256 antes de ser aplicado.
+    var pack_updated: bool = await updater.fetch_game_pack()
+    if config_updated or pack_updated:
+        get_tree().call_deferred("reload_current_scene")
+
+func _build_world() -> void:
     _make_environment()
     _make_world()
     _make_road_details()
@@ -17,14 +34,6 @@ func _ready() -> void:
     _make_player()
     _make_camera()
     _make_hud()
-
-    # Atualização live em segundo plano, depois que o jogo já está visível.
-    var updater = preload("res://scripts/remote_updater.gd").new()
-    add_child(updater)
-    remote_settings = await updater.fetch_config()
-    var pack_updated: bool = await updater.fetch_game_pack()
-    if pack_updated:
-        get_tree().call_deferred("reload_current_scene")
 
 func _make_environment() -> void:
     var env := WorldEnvironment.new()
