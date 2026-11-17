@@ -2,11 +2,6 @@ name: Publish Godot live update only
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'godot/**'
-      - '.github/workflows/publish-live-update.yml'
 
 permissions:
   contents: write

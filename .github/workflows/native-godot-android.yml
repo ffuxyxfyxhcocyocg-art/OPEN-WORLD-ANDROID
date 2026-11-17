@@ -76,41 +76,6 @@ jobs:
           test -s "$GITHUB_WORKSPACE/game-update.pck"
           unzip -t "$GITHUB_WORKSPACE/OPEN-WORLD-GODOT.apk"
           sha256sum "$GITHUB_WORKSPACE/game-update.pck"
-      - name: Publish live content pack
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh release view vms-city-live --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload vms-city-live "$GITHUB_WORKSPACE/game-update.pck" --clobber --repo "$GITHUB_REPOSITORY"
-          else
-            gh release create vms-city-live "$GITHUB_WORKSPACE/game-update.pck" --title "Open World live update" --notes "Pacote remoto do jogo Godot." --repo "$GITHUB_REPOSITORY"
-          fi
-      - name: Publish verified update manifests
-        run: |
-          VERSION="$GITHUB_RUN_NUMBER"
-          PACK_SHA="$(sha256sum "$GITHUB_WORKSPACE/game-update.pck" | awk '{print $1}')"
-          CONFIG_SHA="$(sha256sum content/world.json | awk '{print $1}')"
-          cat > updates/manifest.json <<EOF
-          {
-            "version": $VERSION,
-            "pck_url": "https://github.com/$GITHUB_REPOSITORY/releases/download/vms-city-live/game-update.pck",
-            "sha256": "$PACK_SHA"
-          }
-          EOF
-          cat > content/manifest.json <<EOF
-          {
-            "version": $VERSION,
-            "content_url": "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/content/world.json",
-            "sha256": "$CONFIG_SHA"
-          }
-          EOF
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add updates/manifest.json content/manifest.json
-          if ! git diff --cached --quiet; then
-            git commit -m "Publish Godot live update v$VERSION [skip ci]"
-            git push origin HEAD:main
-          fi
       - name: Upload Android APK artifact
         uses: actions/upload-artifact@v4
         with:
