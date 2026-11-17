@@ -3,6 +3,9 @@ extends Node
 const MANIFEST_URL := "https://raw.githubusercontent.com/ffuxyxfyxhcocyocg-art/OPEN-WORLD-ANDROID/main/content/manifest.json"
 const MAX_DOWNLOAD_BYTES := 8 * 1024 * 1024
 
+func get_cached_config() -> Dictionary:
+    return _read_cached_config()
+
 func fetch_config() -> Dictionary:
     var cached := _read_cached_config()
     var manifest_request := HTTPRequest.new()
