@@ -325,6 +325,19 @@ func _make_hud() -> void:
     move_pad = VirtualJoystick.new()
     move_pad.position = Vector2(30, 480)
     hud.add_child(move_pad)
+    var jump_button := Button.new()
+    jump_button.text = "PULAR"
+    jump_button.position = Vector2(1080, 560)
+    jump_button.size = Vector2(150, 90)
+    jump_button.pressed.connect(func(): if player: player.request_jump())
+    hud.add_child(jump_button)
+    var run_button := Button.new()
+    run_button.text = "CORRER"
+    run_button.position = Vector2(920, 580)
+    run_button.size = Vector2(140, 70)
+    run_button.button_down.connect(func(): if player: player.set_sprinting(true))
+    run_button.button_up.connect(func(): if player: player.set_sprinting(false))
+    hud.add_child(run_button)
 
 class VirtualJoystick:
     extends Control
