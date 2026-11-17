@@ -214,8 +214,9 @@ func _make_player() -> void:
         var shoe := BoxMesh.new()
         shoe.size = Vector3(0.30, 0.16, 0.42)
         _character_piece(visual, shoe, Vector3(side * 0.20, 0.08, -0.08), shoes)
-    # Mantém o personagem humanoide visível como base. O GLB anterior era
-    # instanciado sem validar escala/visibilidade e apagava este modelo.
+    # Carrega o modelo 3D real do Midas incluído no pacote remoto.
+    _load_midas_model(visual)
+
 
     var shape := CollisionShape3D.new()
     var cs := CapsuleShape3D.new()
@@ -225,6 +226,51 @@ func _make_player() -> void:
     player.add_child(shape)
     player.set_script(PLAYER_SCRIPT)
     add_child(player)
+
+func _load_midas_model(visual_root: Node3D) -> void:
+    var model_resource := load("res://models/midas.glb")
+    if model_resource == null or not model_resource is PackedScene:
+        push_warning("Midas GLB não foi importado; mantendo personagem de reserva.")
+        return
+    var model := (model_resource as PackedScene).instantiate() as Node3D
+    if model == null:
+        push_warning("Midas GLB não gerou Node3D; mantendo personagem de reserva.")
+        return
+    model.name = "MidasGLB"
+    visual_root.add_child(model)
+    var meshes: Array[MeshInstance3D] = []
+    _collect_model_meshes(model, meshes)
+    var bounds := AABB()
+    var has_bounds := false
+    var inverse := model.global_transform.affine_inverse()
+    for mesh_instance in meshes:
+        if mesh_instance.mesh == null:
+            continue
+        var mesh_bounds := mesh_instance.mesh.get_aabb().transformed(inverse * mesh_instance.global_transform)
+        if not has_bounds:
+            bounds = mesh_bounds
+            has_bounds = true
+        else:
+            bounds = bounds.merge(mesh_bounds)
+    if not has_bounds or bounds.size.y <= 0.001:
+        model.queue_free()
+        push_warning("Midas GLB sem malhas visíveis; mantendo personagem de reserva.")
+        return
+    var scale_factor := 1.8 / bounds.size.y
+    model.scale = Vector3.ONE * scale_factor
+    model.position = Vector3(0.0, -bounds.position.y * scale_factor, 0.0)
+    for child in visual_root.get_children():
+        if child != model:
+            visual_root.remove_child(child)
+            child.queue_free()
+    print("OPEN WORLD: Midas GLB carregado; malhas=", meshes.size(), " altura=", bounds.size.y)
+
+func _collect_model_meshes(node: Node, output: Array[MeshInstance3D]) -> void:
+    if node is MeshInstance3D:
+        output.append(node as MeshInstance3D)
+    for child in node.get_children():
+        _collect_model_meshes(child, output)
+
 
 func _make_camera() -> void:
     camera = Camera3D.new()
