@@ -120,8 +120,8 @@ func _building(p: Vector3) -> void:
     _box(self, Vector3(width + 0.25, 0.28, depth + 0.25), p + Vector3(0, h - 0.12, 0), trim_color, false)
 
     # Janelas alinhadas na fachada da rua.
-    var columns := max(2, int(width / 2.8))
-    var rows := max(2, int(h / 2.8))
+    var columns: int = maxi(2, int(width / 2.8))
+    var rows: int = maxi(2, int(h / 2.8))
     for y in range(rows):
         for x in range(columns):
             var wx := -width / 2.0 + (float(x) + 0.5) * width / float(columns)
@@ -210,16 +210,16 @@ func _make_player() -> void:
         shoe.size = Vector3(0.30, 0.16, 0.42)
         _character_piece(visual, shoe, Vector3(side * 0.20, 0.08, -0.08), shoes)
     # Use o Midas GLB original do projeto, mantendo o boneco procedural como fallback.
-    var midas_scene = load("res://models/midas.glb")
-    if midas_scene is PackedScene:
-        var midas_model := midas_scene.instantiate()
-        midas_model.name = "MidasModel"
-        if midas_model is Node3D:
+    var midas_scene: PackedScene = load("res://models/midas.glb") as PackedScene
+    if midas_scene != null:
+        var midas_model: Node3D = midas_scene.instantiate() as Node3D
+        if midas_model != null:
+            midas_model.name = "MidasModel"
             midas_model.scale = Vector3.ONE
             for old_part in visual.get_children():
                 old_part.queue_free()
             visual.add_child(midas_model)
-            var animator := _find_animation_player(midas_model)
+            var animator: AnimationPlayer = _find_animation_player(midas_model)
             if animator:
                 var clips := animator.get_animation_list()
                 var chosen := ""

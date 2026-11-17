@@ -25,8 +25,15 @@ jobs:
           include-templates: true
       - name: Import project
         run: godot --headless --editor --path godot --quit
-      - name: Smoke test game startup
-        run: godot --headless --path godot --quit-after 8
+      - name: Smoke test game startup and fail on script errors
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path godot --quit-after 8 2>&1 | tee godot-smoke.log
+          if grep -E 'SCRIPT ERROR|Parse Error|Failed to load script' godot-smoke.log; then
+            echo 'Godot script errors detected; refusing to publish a broken update.'
+            exit 1
+          fi
       - name: Export remote PCK only (no APK)
         run: godot --headless --path godot --export-pack "Android" "$GITHUB_WORKSPACE/game-update.pck"
       - name: Verify package
