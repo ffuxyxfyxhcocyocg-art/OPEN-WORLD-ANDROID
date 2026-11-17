@@ -57,7 +57,7 @@ func _mat(color: Color) -> StandardMaterial3D:
     m.albedo_color = color
     return m
 
-func _box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) -> MeshInstance3D:
+func _box(parent: Node3D, size: Vector3, pos: Vector3, color: Color, with_collision: bool = true) -> MeshInstance3D:
     var n := MeshInstance3D.new()
     var mesh := BoxMesh.new()
     mesh.size = size
@@ -65,14 +65,15 @@ func _box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) -> MeshInst
     n.position = pos
     n.material_override = _mat(color)
     parent.add_child(n)
-    var body := StaticBody3D.new()
-    body.position = pos
-    var collision := CollisionShape3D.new()
-    var shape := BoxShape3D.new()
-    shape.size = size
-    collision.shape = shape
-    body.add_child(collision)
-    parent.add_child(body)
+    if with_collision:
+        var body := StaticBody3D.new()
+        body.position = pos
+        var collision := CollisionShape3D.new()
+        var shape := BoxShape3D.new()
+        shape.size = size
+        collision.shape = shape
+        body.add_child(collision)
+        parent.add_child(body)
     return n
 
 func _make_world() -> void:
@@ -114,7 +115,7 @@ func _building(p: Vector3) -> void:
     b.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 
     # Moldura clara no topo para dar acabamento às fachadas.
-    _box(self, Vector3(width + 0.25, 0.28, depth + 0.25), p + Vector3(0, h - 0.12, 0), trim_color)
+    _box(self, Vector3(width + 0.25, 0.28, depth + 0.25), p + Vector3(0, h - 0.12, 0), trim_color, false)
 
     # Janelas alinhadas na fachada da rua.
     var columns := max(2, int(width / 2.8))
@@ -124,8 +125,8 @@ func _building(p: Vector3) -> void:
             var wx := -width / 2.0 + (float(x) + 0.5) * width / float(columns)
             var wy := 1.5 + float(y) * 2.35
             if wy < h - 0.8:
-                _box(self, Vector3(1.05, 1.15, 0.10), p + Vector3(wx, wy, depth / 2.0 + 0.06), window_color)
-                _box(self, Vector3(1.05, 1.15, 0.10), p + Vector3(wx, wy, -depth / 2.0 - 0.06), window_color)
+                _box(self, Vector3(1.05, 1.15, 0.10), p + Vector3(wx, wy, depth / 2.0 + 0.06), window_color, false)
+                _box(self, Vector3(1.05, 1.15, 0.10), p + Vector3(wx, wy, -depth / 2.0 - 0.06), window_color, false)
 
 func _tree(p: Vector3) -> void:
     var trunk := MeshInstance3D.new()
@@ -150,18 +151,18 @@ func _tree(p: Vector3) -> void:
 func _make_road_details() -> void:
     var sidewalk := Color(0.56, 0.57, 0.54)
     var paint := Color(0.92, 0.88, 0.68)
-    _box(self, Vector3(3.0, 0.18, 180), Vector3(-8.5, 0.02, 0), sidewalk)
-    _box(self, Vector3(3.0, 0.18, 180), Vector3(8.5, 0.02, 0), sidewalk)
-    _box(self, Vector3(180, 0.18, 3.0), Vector3(0, 0.03, -8.5), sidewalk)
-    _box(self, Vector3(180, 0.18, 3.0), Vector3(0, 0.03, 8.5), sidewalk)
+    _box(self, Vector3(3.0, 0.18, 180), Vector3(-8.5, 0.02, 0), sidewalk, false)
+    _box(self, Vector3(3.0, 0.18, 180), Vector3(8.5, 0.02, 0), sidewalk, false)
+    _box(self, Vector3(180, 0.18, 3.0), Vector3(0, 0.03, -8.5), sidewalk, false)
+    _box(self, Vector3(180, 0.18, 3.0), Vector3(0, 0.03, 8.5), sidewalk, false)
     for i in range(-8, 9):
         var offset := float(i) * 10.0
-        _box(self, Vector3(0.18, 0.025, 5.0), Vector3(offset, 0.075, 0), paint)
-        _box(self, Vector3(5.0, 0.025, 0.18), Vector3(0, 0.075, offset), paint)
+        _box(self, Vector3(0.18, 0.025, 5.0), Vector3(offset, 0.075, 0), paint, false)
+        _box(self, Vector3(5.0, 0.025, 0.18), Vector3(0, 0.075, offset), paint, false)
     for side in [-1.0, 1.0]:
         for z in [-24.0, 24.0]:
-            _box(self, Vector3(0.16, 5.2, 0.16), Vector3(side * 11.0, 2.6, z), Color(0.12, 0.14, 0.16))
-            _box(self, Vector3(1.0, 0.18, 0.42), Vector3(side * 11.0, 5.25, z), Color(0.95, 0.82, 0.58))
+            _box(self, Vector3(0.16, 5.2, 0.16), Vector3(side * 11.0, 2.6, z), Color(0.12, 0.14, 0.16), false)
+            _box(self, Vector3(1.0, 0.18, 0.42), Vector3(side * 11.0, 5.25, z), Color(0.95, 0.82, 0.58), false)
 
 func _character_piece(parent: Node3D, mesh: PrimitiveMesh, pos: Vector3, color: Color) -> MeshInstance3D:
     var part := MeshInstance3D.new()
