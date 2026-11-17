@@ -7,6 +7,7 @@ var hud: CanvasLayer
 var move_pad
 var trees := []
 var remote_settings: Dictionary = {}
+var update_status: Label
 
 func _ready() -> void:
     # Primeiro use a última configuração salva: o mundo abre mesmo sem internet.
@@ -14,6 +15,8 @@ func _ready() -> void:
     add_child(updater)
     remote_settings = updater.get_cached_config()
     _build_world()
+    if update_status:
+        update_status.text = "ATUALIZAÇÕES AUTOMÁTICAS ATIVAS"
 
     # Verifique o GitHub em segundo plano, sem bloquear a exibição do jogo.
     var previous_settings := remote_settings.duplicate(true)
@@ -271,6 +274,12 @@ func _make_hud() -> void:
     help.add_theme_font_size_override("font_size", 16)
     help.add_theme_color_override("font_color", Color.WHITE)
     hud.add_child(help)
+    update_status = Label.new()
+    update_status.text = "ATUALIZAÇÕES AUTOMÁTICAS ATIVAS"
+    update_status.position = Vector2(22, 82)
+    update_status.add_theme_font_size_override("font_size", 13)
+    update_status.add_theme_color_override("font_color", Color(0.55, 1.0, 0.72))
+    hud.add_child(update_status)
     move_pad = VirtualJoystick.new()
     move_pad.position = Vector2(30, 480)
     hud.add_child(move_pad)
