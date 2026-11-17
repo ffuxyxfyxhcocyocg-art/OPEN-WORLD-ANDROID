@@ -3,10 +3,6 @@ name: Godot Android APK + Live Updates
 on:
   push:
     branches: [main]
-    paths:
-      - 'godot/**'
-      - 'content/**'
-      - '.github/workflows/native-godot-android.yml'
   workflow_dispatch:
 
 permissions:

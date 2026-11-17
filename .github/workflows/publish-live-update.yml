@@ -42,7 +42,8 @@ jobs:
           fi
       - name: Publish manifest with checksum
         run: |
-          VERSION="$GITHUB_RUN_NUMBER"
+          CURRENT_VERSION="$(sed -n 's/.*"version": \([0-9]*\).*/\1/p' updates/manifest.json)"
+          VERSION="$((CURRENT_VERSION + 1))"
           HASH="$(sha256sum game-update.pck | awk '{print $1}')"
           cat > updates/manifest.json <<EOF
           {
