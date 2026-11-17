@@ -228,8 +228,8 @@ func _make_player() -> void:
     add_child(player)
 
 func _load_midas_model(visual_root: Node3D) -> void:
-    var model_resource := load("res://models/midas.glb")
-    if model_resource == null or not model_resource is PackedScene:
+    var model_resource: Resource = load("res://models/midas.glb")
+    if model_resource == null or not (model_resource is PackedScene):
         push_warning("Midas GLB não foi importado; mantendo personagem de reserva.")
         return
     var model := (model_resource as PackedScene).instantiate() as Node3D
@@ -240,37 +240,28 @@ func _load_midas_model(visual_root: Node3D) -> void:
     visual_root.add_child(model)
     var meshes: Array[MeshInstance3D] = []
     _collect_model_meshes(model, meshes)
-    var bounds := AABB()
-    var has_bounds := false
-    var inverse := model.global_transform.affine_inverse()
+    var visible_mesh_count := 0
     for mesh_instance in meshes:
-        if mesh_instance.mesh == null:
-            continue
-        var mesh_bounds := mesh_instance.mesh.get_aabb().transformed(inverse * mesh_instance.global_transform)
-        if not has_bounds:
-            bounds = mesh_bounds
-            has_bounds = true
-        else:
-            bounds = bounds.merge(mesh_bounds)
-    if not has_bounds or bounds.size.y <= 0.001:
+        if mesh_instance.mesh != null and mesh_instance.visible:
+            visible_mesh_count += 1
+    if visible_mesh_count == 0:
         model.queue_free()
         push_warning("Midas GLB sem malhas visíveis; mantendo personagem de reserva.")
         return
-    var scale_factor := 1.8 / bounds.size.y
-    model.scale = Vector3.ONE * scale_factor
-    model.position = Vector3(0.0, -bounds.position.y * scale_factor, 0.0)
+    # O GLB já traz a escala definida pelo autor; evita cálculos AABB incompatíveis.
+    model.scale = Vector3.ONE
+    model.position = Vector3.ZERO
     for child in visual_root.get_children():
         if child != model:
             visual_root.remove_child(child)
             child.queue_free()
-    print("OPEN WORLD: Midas GLB carregado; malhas=", meshes.size(), " altura=", bounds.size.y)
+    print("OPEN WORLD: Midas GLB carregado; malhas visíveis=", visible_mesh_count)
 
 func _collect_model_meshes(node: Node, output: Array[MeshInstance3D]) -> void:
     if node is MeshInstance3D:
         output.append(node as MeshInstance3D)
     for child in node.get_children():
         _collect_model_meshes(child, output)
-
 
 func _make_camera() -> void:
     camera = Camera3D.new()
