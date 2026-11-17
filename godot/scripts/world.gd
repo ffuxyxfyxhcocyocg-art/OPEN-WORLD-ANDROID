@@ -9,13 +9,7 @@ var trees := []
 var remote_settings: Dictionary = {}
 
 func _ready() -> void:
-    var updater = preload("res://scripts/remote_updater.gd").new()
-    add_child(updater)
-    remote_settings = await updater.fetch_config()
-    var pack_updated: bool = await updater.fetch_game_pack()
-    if pack_updated:
-        get_tree().call_deferred("reload_current_scene")
-        return
+    # Renderize o mundo primeiro; a rede nunca deve bloquear a tela inicial.
     _make_environment()
     _make_world()
     _make_road_details()
@@ -23,6 +17,14 @@ func _ready() -> void:
     _make_player()
     _make_camera()
     _make_hud()
+
+    # Atualização live em segundo plano, depois que o jogo já está visível.
+    var updater = preload("res://scripts/remote_updater.gd").new()
+    add_child(updater)
+    remote_settings = await updater.fetch_config()
+    var pack_updated: bool = await updater.fetch_game_pack()
+    if pack_updated:
+        get_tree().call_deferred("reload_current_scene")
 
 func _make_environment() -> void:
     var env := WorldEnvironment.new()
